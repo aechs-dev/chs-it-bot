@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WhatsApp AI Bot — Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0f0d; color: #d4edd9; font-family: monospace; }
+  header { padding: 20px 32px; border-bottom: 1px solid #1e2e24; display: flex; align-items: center; justify-content: space-between; background: #0d1f14; }
+  .logo { font-size: 20px; font-weight: bold; color: #25d366; }
+  .logo span { color: #aaa; font-size: 13px; margin-left: 10px; }
+  #status-badge { padding: 6px 14px; border-radius: 999px; border: 1px solid #1e2e24; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd166; animation: pulse 2s infinite; }
+  #status-dot.ready { background: #25d366; animation: none; }
+  #status-dot.error { background: #ff4d6d; animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  main { display: grid; grid-template-columns: 1fr; height: calc(100vh - 65px); }
+  .log-header { padding: 16px 32px; border-bottom: 1px solid #1e2e24; display: flex; justify-content: space-between; align-items: center; }
+  #clear-btn { padding: 6px 14px; background: transparent; border: 1px solid #1e2e24; border-radius: 6px; color: #aaa; cursor: pointer; font-family: monospace; }
+  #clear-btn:hover { border-color: #ff4d6d; color: #ff4d6d; }
+  #log-list { padding: 20px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 120px); }
+  .msg-entry { display: flex; flex-direction: column; gap: 4px; animation: slideIn 0.2s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .msg-entry.in { align-items: flex-start; }
+  .msg-entry.out { align-items: flex-end; }
+  .msg-bubble { max-width: 60%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .msg-entry.in .msg-bubble { background: #0d2218; border: 1px solid #1e3828; border-bottom-left-radius: 4px; }
+  .msg-entry.out .msg-bubble { background: #1a9e4a; border: 1px solid #1a7a3a; border-bottom-right-radius: 4px; }
+  .msg-meta { font-size: 10px; color: #4a6655; display: flex; gap: 8px; padding: 0 4px; }
+  .dir-label { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; letter-spacing: 1px; }
+  .in .dir-label { background: #0d2a1a; color: #25d366; }
+  .out .dir-label { background: #1a2e20; color: #7dd8a0; }
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a6655; gap: 12px; }
+  .empty .icon { font-size: 48px; opacity: 0.4; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">💬 WhatsApp AI Bot <span>powered by Claude</span></div>
+  <div id="status-badge">
+    <div id="status-dot"></div>
+    <span id="status-text">Initializing...</span>
+  </div>
+</header>
+<main>
+  <div>
+    <div class="log-header">
+      <h3>Live Message Log</h3>
+      <button id="clear-btn">Clear</button>
+    </div>
+    <div id="log-list">
+      <div class="empty">
+        <span class="icon">🤖</span>
+        <p>Waiting for messages...</p>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  let received = 0, sent = 0;
+
+  fetch('/dashboard/api/logs')
+    .then(r => r.json())
+    .then(logs => { if (logs.length) { document.getElementById('log-list').innerHTML = ''; [...logs].reverse().forEach(addEntry); } });
+
+  function addEntry(entry) {
+    const list = document.getElementById('log-list');
+    const empty = list.querySelector('.empty');
+    if (empty) empty.remove();
+    const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = `msg-entry ${entry.direction}`;
+    div.innerHTML = `
+      <div class="msg-meta">
+        <span class="dir-label">${entry.direction === 'in' ? 'RECV' : 'SENT'}</span>
+        <span>${entry.from}</span>
+        <span>${time}</span>
+      </div>
+      <div class="msg-bubble">${entry.body.replace(/</g,'&lt;')}</div>`;
+    list.appendChild(div);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  document.getElementById('clear-btn').onclick = () => {
+    document.getElementById('log-list').innerHTML = '<div class="empty"><span class="icon">🤖</span><p>Log cleared...</p></div>';
+  };
+</script>
+</body>
+</html>

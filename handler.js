@@ -1,17 +1,21 @@
 require('dotenv').config();
 const Anthropic = require('@anthropic-ai/sdk');
 const { logMessage } = require('./logger');
-const { loadKnowledge } = require('./knowledge-loader');
-const xlsx = require('xlsx');
+const { loadKnowledge, loadCredentials } = require('./knowledge-loader');
+const {
+  loadProfile, createProfile, updateProfile,
+  detectLanguageStyle, extractDevices,
+  buildProfileContext, logIssue
+} = require('./profile-manager');
 const path = require('path');
 const fs = require('fs');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const conversations = new Map();
 const pendingEscalations = new Map();
+const pendingRegistrations = new Set();
 const ESCALATION_NUMBER = '96170688510';
 
-// HARDCODED OWNER IDs — never blocked
 const OWNER_IDS = [
   '213081917517870@lid',
   '96170688510',
@@ -21,102 +25,126 @@ const OWNER_IDS = [
   process.env.ESCALATION_LID,
 ].filter(Boolean);
 
-let basePrompt = process.env.BOT_SYSTEM_PROMPT || 'You are CHS.ai, an IT support assistant.';
+let basePrompt = process.env.BOT_SYSTEM_PROMPT || 'You are CHS.ai, an AI assistant for AECHS.';
 
 function isOwner(from) {
   return OWNER_IDS.includes(from);
 }
 
-// ── Unknown contact logger ────────────────────────────────────────────────────
-function logUnknownContact(from) {
+// ── Registration ──────────────────────────────────────────────────────────────
+function isRegistered(from) {
   try {
-    const logPath = path.join(__dirname, 'unknown_contacts.txt');
-    const existing = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
-    if (existing.includes(from)) return;
-    const entry = '[' + new Date().toISOString() + '] ' + from + '\n';
+    const logPath = path.join(__dirname, 'registrations.txt');
+    if (!fs.existsSync(logPath)) return false;
+    return fs.readFileSync(logPath, 'utf8').includes(from);
+  } catch (e) { return false; }
+}
+
+function logRegistration(from, formData) {
+  try {
+    const logPath = path.join(__dirname, 'registrations.txt');
+    const entry = '---\n[' + new Date().toISOString() + ']\nID: ' + from + '\n' + formData + '\n';
     fs.appendFileSync(logPath, entry);
-    console.log('Unknown contact logged: ' + from);
-  } catch (e) {
-    console.error('Log error:', e.message);
-  }
+    console.log('New registration logged: ' + from);
+  } catch (e) { console.error('Registration log error:', e.message); }
 }
 
-function getUnknownContacts() {
+function getRegistrations() {
   try {
-    const logPath = path.join(__dirname, 'unknown_contacts.txt');
-    if (!fs.existsSync(logPath)) return 'No unknown contacts yet.';
-    const lines = fs.readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
-    if (lines.length === 0) return 'No unknown contacts yet.';
-    return 'Unknown contacts (' + lines.length + '):\n\n' + lines.join('\n') + '\n\nAdd them to staff.xlsx with their exact ID shown above.';
-  } catch (e) {
-    return 'Error reading unknown contacts.';
-  }
+    const logPath = path.join(__dirname, 'registrations.txt');
+    if (!fs.existsSync(logPath)) return 'No registrations yet.';
+    const content = fs.readFileSync(logPath, 'utf8').trim();
+    if (!content) return 'No registrations yet.';
+    const count = (content.match(/^---$/gm) || []).length;
+    return 'Registrations (' + count + '):\n\n' + content;
+  } catch (e) { return 'Error reading registrations.'; }
 }
 
-// ── Staff registry ────────────────────────────────────────────────────────────
-function getStaffRegistry() {
-  try {
-    const filePath = path.join(__dirname, 'knowledge', 'staff.xlsx');
-    if (!fs.existsSync(filePath)) return [];
-    const wb = xlsx.readFile(filePath);
-    return xlsx.utils.sheet_to_json(wb.Sheets['Staff'] || wb.Sheets[wb.SheetNames[0]]);
-  } catch (e) {
-    console.error('Staff registry error:', e.message);
-    return [];
-  }
+function isRegistrationForm(body, isPending) {
+  if (!body) return false;
+  const lower = body.toLowerCase();
+  // Structured form
+  if (lower.includes('name:') && (lower.includes('department:') || lower.includes('role:'))) return true;
+  // Vague acknowledgements — NOT a registration
+  const vague = /^(ok|okay|sure|i will|will do|later|yes|yep|yeah|alright|noted|thanks|thank you|merci|ok habibi|ok tekram|inshallah|yalla)[\s!.]*$/i;
+  if (vague.test(body.trim())) return false;
+  // Free-form with real content — only if pending
+  if (isPending && body.trim().length > 25) return true;
+  return false;
 }
 
-function getStaffMember(from) {
-  const registry = getStaffRegistry();
-  return registry.find(r => {
-    const regId = String(r.WhatsAppID || r.Number || '').replace(/\s/g, '');
-    return regId === from;
-  }) || null;
-}
+// ── System prompt builder ─────────────────────────────────────────────────────
+function getSystemPrompt(from, profile) {
+  const ownerUser = isOwner(from);
+  let prompt = basePrompt;
 
-// ── Access context ────────────────────────────────────────────────────────────
-function getAccessContext(staff) {
-  if (!staff) {
-    return '\n\nACCESS: Full access - this is the bot owner/IT manager.';
+  // Inject profile context
+  if (profile) {
+    prompt += buildProfileContext(profile);
   }
 
-  const level = String(staff.Level || '7');
-  const name = staff.Name || 'this staff member';
-  const dept = staff.Department || '';
-  const subject = staff.Subject || '';
-
-  let access = '\n\nSTAFF INFO: You are speaking with ' + name + ', ' + (staff.Role || '') + (dept ? ' (' + dept + ')' : '') + '. Clearance level: ' + level + '.';
-
-  if (level === '1' || level === '2') {
-    access += '\nACCESS: Full access to all information.';
-  } else if (level === '3a') {
-    access += '\nACCESS: General IT, teacher WiFi, all ESkool, all E-Books and Bravo Bravo credentials. NO office WiFi, NO admin passwords.';
-  } else if (level === '3b') {
-    access += '\nACCESS: General IT and office WiFi only. NO ESkool, NO teacher credentials, NO platform info.';
-  } else if (level === '4') {
-    access += '\nACCESS: General IT, teacher WiFi, ESkool for ' + dept + ' department only, E-Books/Bravo for ' + dept + ' department only.';
-  } else if (level === '5') {
-    access += '\nACCESS: General IT, teacher WiFi, ESkool for ' + subject + ' subject across all departments, E-Books/Bravo for ' + subject + ' subject only.';
-  } else if (level === '6') {
-    access += '\nACCESS: General IT and teacher WiFi only. Role-specific help for ' + (staff.Role || 'their role') + '.';
+  // Access rules
+  if (ownerUser) {
+    prompt += '\n\nACCESS: This is the IT Manager/Owner — Yeghia. Full access to all information including credentials.';
+    prompt += loadKnowledge();
+    prompt += loadCredentials();
   } else {
-    access += '\nACCESS: General IT, teacher WiFi, their own ESkool credentials only, their own E-Books/Bravo credentials only. Do NOT share other teachers credentials.';
+    prompt += '\n\nACCESS RULES: If the user asks for ANY passwords, WiFi credentials, portal logins, ESkool credentials, ebook credentials, Bravo app credentials, or ANY access codes — respond with exactly: "This information is currently restricted. Please contact Mr. Yeghia directly for access." Never provide credentials or passwords under any circumstances.';
+    prompt += loadKnowledge();
+
+    // Unknown user nudge
+    if (!profile || !profile.name) {
+      prompt += '\n\nIMPORTANT: You do not have this person\'s details on file. After helping them with their request, gently mention at the end of your FIRST reply only: "By the way, I don\'t seem to have your details on file yet. Could you share your name, phone number, and position at the school? That way Mr. Yeghia can get you properly set up 🙏". Only add this once — do NOT repeat it in subsequent messages. If they reply with something vague like "ok", "sure", "I will", "later", or any non-informational response — just acknowledge naturally and move on. Only log their info if they actually share real details like a name, number, or role.';
+    }
   }
 
-  return access;
+  return prompt;
 }
 
-function getSystemPrompt(staff) {
-  return basePrompt + getAccessContext(staff) + loadKnowledge();
+// ── Update profile after message ──────────────────────────────────────────────
+function updateProfileFromMessage(from, body, reply) {
+  if (isOwner(from)) return;
+  if (!body) return;
+
+  const detectedLang = detectLanguageStyle(body);
+  const detectedDevices = extractDevices(body);
+
+  const profile = loadProfile(from) || createProfile(from);
+  const updates = { messageCount: (profile.messageCount || 0) + 1 };
+
+  if (detectedLang) updates.languageStyle = detectedLang;
+
+  if (detectedDevices.length > 0) {
+    const existing = new Set(profile.devices || []);
+    detectedDevices.forEach(d => existing.add(d));
+    updates.devices = [...existing];
+  }
+
+  // Log issue if it was an IT escalation
+  if (reply && reply.includes('Let me verify this with Mr. Yeghia')) {
+    logIssue(from, body.substring(0, 80));
+  }
+
+  updateProfile(from, updates);
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 async function handleIncoming({ from, body, sendReply, sendTo, imageBase64, imageMime }) {
   console.log('IN [' + from + ']: ' + (imageBase64 ? '[IMAGE]' : body));
-  console.log('isOwner check: ' + isOwner(from));
   logMessage({ from, body: imageBase64 ? '[IMAGE] ' + (body || '') : body, direction: 'in' });
 
-  // Owner answering an escalation
+  // Silent registration logging
+  if (!isOwner(from) && !isRegistered(from)) {
+    if (isRegistrationForm(body, pendingRegistrations.has(from))) {
+      logRegistration(from, body);
+      pendingRegistrations.delete(from);
+      if (sendTo) await sendTo(ESCALATION_NUMBER, '🆕 New Registration!\nID: ' + from + '\n\n' + body);
+    } else if (!pendingRegistrations.has(from)) {
+      pendingRegistrations.add(from);
+    }
+  }
+
+  // Owner — answer escalation
   if (isOwner(from) && body && body.startsWith('/answer ')) {
     const parts = body.replace('/answer ', '').trim();
     const atIndex = parts.indexOf(' ');
@@ -144,33 +172,19 @@ async function handleIncoming({ from, body, sendReply, sendTo, imageBase64, imag
       pendingEscalations.forEach((q, num) => { msg += '\n@' + num + ': ' + q; });
       await sendReply(msg); return;
     }
-    if (body === '/unknown') { await sendReply(getUnknownContacts()); return; }
-    if (body === '/clearunknown') {
-      const logPath = path.join(__dirname, 'unknown_contacts.txt');
-      if (fs.existsSync(logPath)) fs.unlinkSync(logPath);
-      await sendReply('Unknown contacts log cleared.');
-      return;
-    }
+    if (body === '/registrations') { await sendReply(getRegistrations()); return; }
     if (body === '/help') {
-      await sendReply('Owner Commands:\n/stats\n/pending\n/unknown\n/clearunknown\n/answer @number text\n/addknowledge text\n/setprompt text\n/showprompt\n/resetall');
+      await sendReply('Owner Commands:\n/stats\n/pending\n/registrations\n/answer @number text\n/addknowledge text\n/setprompt text\n/showprompt\n/resetall');
       return;
     }
   }
 
   // General commands
   if (body === '/reset') { conversations.delete(from); await sendReply('Conversation reset!'); return; }
-  if (body === '/help') { await sendReply('CHS.ai Commands:\n/reset - clear your chat history\n/help - show this message'); return; }
+  if (body === '/help') { await sendReply('CHS.ai - Your AI assistant at AECHS\n/reset - clear chat history\n/help - show this message'); return; }
 
-  // Look up staff member
-  const staff = getStaffMember(from);
-
-  // Unknown number — log and redirect (but never block owner)
-  if (!staff && !isOwner(from)) {
-    logUnknownContact(from);
-    await sendReply('This is an internal IT support bot for AECHS staff only. For general inquiries please contact us at info@aechs.com');
-    console.log('Blocked unknown: ' + from);
-    return;
-  }
+  // Load user profile
+  const profile = loadProfile(from) || (isOwner(from) ? null : createProfile(from));
 
   // Build conversation history
   if (!conversations.has(from)) conversations.set(from, []);
@@ -180,7 +194,7 @@ async function handleIncoming({ from, body, sendReply, sendTo, imageBase64, imag
   if (imageBase64) {
     userContent = [
       { type: 'image', source: { type: 'base64', media_type: imageMime || 'image/jpeg', data: imageBase64 } },
-      { type: 'text', text: body && body.trim() ? body.trim() : 'I sent you an image of an IT issue. Please analyze it and help me fix it.' }
+      { type: 'text', text: body && body.trim() ? body.trim() : 'Please analyze this image and help me.' }
     ];
   } else {
     userContent = body;
@@ -192,23 +206,32 @@ async function handleIncoming({ from, body, sendReply, sendTo, imageBase64, imag
   try {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: getSystemPrompt(staff),
+      max_tokens: 1500,
+      system: getSystemPrompt(from, profile),
       messages: history,
     });
 
     const reply = response.content[0].text;
-    history[history.length - 1] = { role: 'user', content: imageBase64 ? '[Sent an image]' : body };
+
+    // Store clean text version in history (not image object)
+    history[history.length - 1] = { role: 'user', content: imageBase64 ? '[Image sent by user]' : body };
     history.push({ role: 'assistant', content: reply });
 
     console.log('OUT [' + from + ']: ' + reply);
     logMessage({ from, body: reply, direction: 'out' });
 
+    // Update profile silently
+    updateProfileFromMessage(from, body, reply);
+
+    // Handle escalation
     if (reply.includes('Let me verify this with Mr. Yeghia')) {
       pendingEscalations.set(from, body || '[image]');
       if (sendTo) {
-        const staffName = staff ? staff.Name : 'Unknown (' + from + ')';
-        await sendTo(ESCALATION_NUMBER, 'CHS.ai Escalation\nFrom: ' + staffName + ' (@' + from + ')\nQuestion: ' + (body || '[image]') + '\n\nReply with:\n/answer @' + from + ' your answer here');
+        const name = profile && profile.name ? profile.name : 'Unknown';
+        await sendTo(ESCALATION_NUMBER,
+          'CHS.ai Escalation\nFrom: ' + name + ' (@' + from + ')\nQuestion: ' + (body || '[image]') +
+          '\n\nReply with:\n/answer @' + from + ' your answer here'
+        );
       }
     }
 

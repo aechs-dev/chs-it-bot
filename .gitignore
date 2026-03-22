@@ -1,3 +1,13 @@
-.env 
-.wwebjs_auth 
-.wwebjs_cache 
+node_modules/
+.env
+.claude/
+.claude.json
+logs/
+memory/
+profiles/
+generated_docs/
+.webjs_auth/
+.webjs_cache/
+.vscode/
+.cache/
+*.log

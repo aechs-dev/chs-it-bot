@@ -4,9 +4,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const { handleIncoming } = require('./handler');
-const { initWhatsAppWeb } = require('./whatsapp-web');
-const dashboard = require('./routes');
+const { handleIncoming } = require('./core/handler');
+const { initWhatsAppWeb } = require('./core/whatsapp-web');
+const dashboard = require('./web/routes');
 
 const PORT = process.env.PORT || 3000;
 

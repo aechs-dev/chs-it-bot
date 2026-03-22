@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHS.ai — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:      #2d5a27;
+    --green-mid:  #3a7232;
+    --green-lt:   #4a8c3f;
+    --green-bg:   #f2faf0;
+    --green-d:    #e2f2de;
+    --green-dd:   #c8e0c4;
+    --white:      #ffffff;
+    --text:       #1e3d1a;
+    --text-mid:   #4a6644;
+    --text-lt:    #7a9876;
+    --border:     #c8e0c4;
+    --shadow:     rgba(45,90,39,0.08);
+    --shadow-md:  rgba(45,90,39,0.15);
+    --red:        #b91c1c;
+    --red-bg:     #fef2f2;
+    --red-border: #fca5a5;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--green-bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: var(--white); border-bottom: 1px solid var(--border);
+    padding: 0 36px; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 1px 6px var(--shadow); position: sticky; top: 0; z-index: 100;
+  }
+  .header-brand { display: flex; align-items: center; gap: 12px; }
+  .brand-name { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--green); }
+  .brand-div  { width: 1px; height: 18px; background: var(--border); }
+  .brand-sub  { font-size: 13px; color: var(--text-lt); }
+  .header-nav { display: flex; gap: 8px; }
+  .nav-btn {
+    padding: 7px 16px; font-size: 13px; color: var(--text-mid);
+    background: transparent; border: 1.5px solid var(--border); border-radius: 8px;
+    cursor: pointer; text-decoration: none; font-family: 'DM Sans', sans-serif;
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .nav-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-d); }
+
+  /* TOP TABS */
+  .top-nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 36px; display: flex; }
+  .top-tab {
+    padding: 15px 22px; font-size: 14px; font-weight: 400; color: var(--text-lt);
+    background: transparent; border: none; border-bottom: 2.5px solid transparent;
+    margin-bottom: -1px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: color .2s, border-color .2s; display: flex; align-items: center; gap: 8px;
+  }
+  .top-tab:hover { color: var(--text-mid); }
+  .top-tab.active { color: var(--green); border-bottom-color: var(--green); font-weight: 500; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .panel-inner { max-width: 860px; margin: 0 auto; padding: 36px 24px; }
+  .panel-inner.wide { max-width: 1140px; }
+  .panel-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--green); margin-bottom: 4px; }
+  .panel-sub   { font-size: 14px; color: var(--text-lt); font-weight: 300; margin-bottom: 28px; }
+
+  /* CARDS */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 26px 28px; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; }
+  .card-label { font-size: 11px; font-weight: 600; letter-spacing: .7px; text-transform: uppercase; color: var(--text-lt); margin-bottom: 16px; }
+
+  /* FORM */
+  .form-row { display: flex; gap: 12px; align-items: flex-end; }
+  .field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-mid); }
+  .field input, .field select, .field textarea {
+    padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+    background: var(--green-bg); outline: none; width: 100%;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--green-lt); background: var(--white);
+    box-shadow: 0 0 0 3px rgba(74,140,63,0.10);
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--text-lt); }
+  .field textarea { resize: vertical; min-height: 72px; }
+
+  /* BUTTONS */
+  .btn { padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; border: none; border-radius: 9px; cursor: pointer; transition: background .2s, box-shadow .2s, transform .1s; white-space: nowrap; }
+  .btn:active { transform: scale(.98); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-green:hover { background: var(--green-lt); box-shadow: 0 4px 12px var(--shadow-md); }
+  .btn-red { background: transparent; color: var(--red); border: 1.5px solid var(--red-border); padding: 6px 13px; font-size: 12.5px; }
+  .btn-red:hover { background: var(--red-bg); }
+  .btn-sm-green { background: var(--green-d); color: var(--green); border: 1.5px solid var(--green-dd); padding: 7px 14px; font-size: 13px; }
+  .btn-sm-green:hover { background: var(--green-dd); }
+
+  .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .msg.ok  { color: var(--green); }
+  .msg.err { color: var(--red); }
+
+  /* USERS TABLE */
+  .tbl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .count-pill { font-size: 12px; color: var(--text-lt); background: var(--green-d); border: 1px solid var(--green-dd); border-radius: 20px; padding: 3px 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 2px solid var(--border); }
+  th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-lt); }
+  tbody tr { border-bottom: 1px solid var(--green-d); transition: background .15s; }
+  tbody tr:hover { background: var(--green-bg); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 12px 14px; font-size: 14px; }
+  .code-tag { font-family: monospace; font-size: 13px; background: var(--green-d); color: var(--green); border: 1px solid var(--green-dd); border-radius: 6px; padding: 2px 10px; display: inline-block; }
+  .empty-row { text-align: center; padding: 36px; color: var(--text-lt); font-size: 14px; }
+
+  /* KNOWLEDGE SUB-TABS */
+  .sub-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--green-d); border: 1px solid var(--border); border-radius: 11px; padding: 4px; width: fit-content; }
+  .sub-tab { padding: 8px 18px; font-size: 13px; color: var(--text-mid); background: transparent; border: none; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background .15s, color .15s; }
+  .sub-tab:hover { color: var(--green); }
+  .sub-tab.active { background: var(--white); color: var(--green); font-weight: 500; box-shadow: 0 1px 4px var(--shadow); }
+
+  /* KNOWLEDGE TABLE */
+  .k-section { background: var(--white); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; }
+  .k-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--green-bg); }
+  .k-section-title { font-size: 13px; font-weight: 600; color: var(--green); }
+  .k-table-wrap { overflow-x: auto; }
+  .k-table { width: 100%; border-collapse: collapse; }
+  .k-table th { background: var(--green-bg); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-lt); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .k-table td { padding: 0; border-bottom: 1px solid var(--green-d); vertical-align: top; }
+  .k-table tr:last-child td { border-bottom: none; }
+  .k-table tr:hover td { background: var(--green-bg); }
+  .k-table td input, .k-table td textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13.5px; padding: 11px 14px; outline: none; resize: none; min-height: 42px; }
+  .k-table td input:focus, .k-table td textarea:focus { background: var(--green-d); box-shadow: inset 2px 0 0 var(--green); }
+  .k-actions { width: 70px; padding: 8px 10px !important; vertical-align: middle; }
+  .k-add-row { padding: 11px 16px; border-top: 1px dashed var(--border); display: flex; align-items: center; gap: 10px; background: var(--green-bg); }
+  .k-add-hint { font-size: 12.5px; color: var(--text-lt); }
+
+  /* Quick Add */
+  .quick-grid { display: grid; gap: 14px; }
+  .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--white); border: 1.5px solid var(--green); color: var(--green); border-radius: 10px; padding: 13px 20px; font-size: 13.5px; font-weight: 500; z-index: 999; box-shadow: 0 8px 24px var(--shadow-md); transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.34,1.56,.64,1); }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.err  { border-color: var(--red); color: var(--red); }
+
+  /* Spinner */
+  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-state { padding: 2rem; color: var(--text-lt); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-brand">
+    <div class="brand-name">CHS.ai</div>
+    <div class="brand-div"></div>
+    <div class="brand-sub">Admin Panel</div>
+  </div>
+  <div class="header-nav">
+    <a href="/dashboard/chat" class="nav-btn">Open Chat →</a>
+    <a href="/dashboard" class="nav-btn">Dashboard</a>
+  </div>
+</header>
+
+<!-- TOP TABS -->
+<div class="top-nav">
+  <button class="top-tab active" onclick="switchPanel('users',this)">👥 Users</button>
+  <button class="top-tab" onclick="switchPanel('knowledge',this)">🧠 Knowledge Base</button>
+</div>
+
+<!-- ════════════ USERS PANEL ════════════ -->
+<div id="panel-users" class="panel active">
+  <div class="panel-inner">
+    <div class="panel-title">Users</div>
+    <div class="panel-sub">Manage staff access to the CHS.ai web chat.</div>
+
+    <div class="card">
+      <div class="card-label">Add New User</div>
+      <div class="form-row">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="new-name" placeholder="e.g. Mr. Jean" />
+        </div>
+        <div class="field">
+          <label>Access Code</label>
+          <input type="text" id="new-code" placeholder="e.g. JB2526" />
+        </div>
+        <button class="btn btn-green" style="height:42px;align-self:flex-end;" onclick="addUser()">Add User</button>
+      </div>
+      <div class="msg" id="add-msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="tbl-header">
+        <div class="card-label" style="margin:0">Current Users</div>
+        <div class="count-pill" id="user-count">—</div>
+      </div>
+      <div id="users-loading" class="loading-state"><span class="spin"></span>Loading users...</div>
+      <table id="users-table" style="display:none">
+        <thead><tr><th>#</th><th>Name</th><th>Access Code</th><th></th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+      <div id="users-empty" class="empty-row" style="display:none">No users yet. Add one above.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ KNOWLEDGE PANEL ════════════ -->
+<div id="panel-knowledge" class="panel">
+  <div class="panel-inner wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="panel-title">Knowledge Base</div>
+      <button class="btn btn-green" onclick="saveAll()">Save All Changes</button>
+    </div>
+    <div class="panel-sub">Edit knowledge files — changes take effect on next bot restart.</div>
+
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="switchKTab('wifi',this)">WiFi</button>
+      <button class="sub-tab" onclick="switchKTab('passwords',this)">Passwords</button>
+      <button class="sub-tab" onclick="switchKTab('eskool',this)">ESkool</button>
+      <button class="sub-tab" onclick="switchKTab('devices',this)">Devices</button>
+      <button class="sub-tab" onclick="switchKTab('contacts',this)">Contacts</button>
+      <button class="sub-tab" onclick="switchKTab('quick',this)">+ Quick Add</button>
+    </div>
+
+    <!-- WiFi -->
+    <div id="ktab-wifi" class="ktab">
+      <div class="k-section">
+        <div class="k-section-head"><span class="k-section-title">WiFi Networks</span><span class="count-pill" id="wifi-count">0 entries</span></div>
+        <div class="k-table-wrap"><table class="k-table">
+          <thead><tr><th>Network Name</th><th>Password</th><th>Login Required</th><th>Username</th><th>Login Password</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="wifi-body"><tr><td colspan="7"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('wifi',['Network Name','Password','Login Required','Username','Login Password','Notes'])">+ Add Row</button><span class="k-add-hint">Add a WiFi network</span></div>
+      </div>
+    </div>
+
+    <!-- Passwords -->
+    <div id="ktab-passwords" class="ktab" style="display:none">
+      <div class="k-section">
+        <div class="k-section-head"><span class="k-section-title">Passwords & Credentials</span><span class="count-pill" id="passwords-count">0 entries</span></div>
+        <div class="k-table-wrap"><table class="k-table">
+          <thead><tr><th>System / Software</th><th>Username</th><th>Password</th><th>URL / Location</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="passwords-body"><tr><td colspan="6"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('passwords',['System / Software','Username','Password','URL / Location','Notes'])">+ Add Row</button><span class="k-add-hint">Add a credential</span></div>
+      </div>
+    </div>
+
+    <!-- ESkool -->
+    <div id="ktab-eskool" class="ktab" style="display:none">
+      <div class="k-section">
+        <div class="k-section-head"><span class="k-section-title">ESkool Issues & Solutions</span><span class="count-pill" id="eskool-count">0 entries</span></div>
+        <div class="k-table-wrap"><table class="k-table">
+          <thead><tr><th>Issue</th><th>Solution</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="eskool-body"><tr><td colspan="4"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('eskool',['Issue','Solution','Notes'])">+ Add Row</button><span class="k-add-hint">Add an ESkool issue</span></div>
+      </div>
+    </div>
+
+    <!-- Devices -->
+    <div id="ktab-devices" class="ktab" style="display:none">
+      <div class="k-section">
+        <div class="k-section-head"><span class="k-section-title">Devices & Hardware</span><span class="count-pill" id="devices-count">0 entries</span></div>
+        <div class="k-table-wrap"><table class="k-table">
+          <thead><tr><th>Device Type</th><th>Location / Model</th><th>Common Issue</th><th>Solution</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="devices-body"><tr><td colspan="6"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('devices',['Device Type','Location / Model','Common Issue','Solution','Notes'])">+ Add Row</button><span class="k-add-hint">Add a device entry</span></div>
+      </div>
+    </div>
+
+    <!-- Contacts -->
+    <div id="ktab-contacts" class="ktab" style="display:none">
+      <div class="k-section">
+        <div class="k-section-head"><span class="k-section-title">Contacts</span><span class="count-pill" id="contacts-count">0 entries</span></div>
+        <div class="k-table-wrap"><table class="k-table">
+          <thead><tr><th>Name</th><th>Role</th><th>WhatsApp / Phone</th><th>Handles</th><th></th></tr></thead>
+          <tbody id="contacts-body"><tr><td colspan="5"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
+        </table></div>
+        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('contacts',['Name','Role','WhatsApp / Phone','Handles'])">+ Add Row</button><span class="k-add-hint">Add a contact</span></div>
+      </div>
+    </div>
+
+    <!-- Quick Add -->
+    <div id="ktab-quick" class="ktab" style="display:none">
+      <div class="card">
+        <div class="card-label">Quick Add to Knowledge Base</div>
+        <div class="quick-grid">
+          <div class="field">
+            <label>Category</label>
+            <select id="quick-category" onchange="renderQuickFields()">
+              <option value="wifi">WiFi</option>
+              <option value="passwords">Password / Credential</option>
+              <option value="eskool">ESkool Issue</option>
+              <option value="devices">Device / Hardware</option>
+              <option value="contacts">Contact</option>
+            </select>
+          </div>
+          <div id="quick-fields"></div>
+          <div><button class="btn btn-green" onclick="quickAdd()">Add to Knowledge Base</button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── PANEL SWITCHER ──
+function switchPanel(name, btn) {
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── USERS ──
+async function loadUsers() {
+  try {
+    const res = await fetch('/dashboard/api/users');
+    renderUsers(await res.json());
+  } catch { document.getElementById('users-loading').innerHTML = 'Failed to load users.'; }
+}
+
+function renderUsers(users) {
+  document.getElementById('users-loading').style.display = 'none';
+  const tbody = document.getElementById('users-tbody');
+  const table = document.getElementById('users-table');
+  const empty = document.getElementById('users-empty');
+  document.getElementById('user-count').textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
+  if (users.length === 0) { table.style.display = 'none'; empty.style.display = 'block'; return; }
+  table.style.display = 'table'; empty.style.display = 'none';
+  tbody.innerHTML = '';
+  users.forEach((u, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:var(--text-lt);font-size:12px;">${i+1}</td><td><strong>${u.name}</strong></td><td><span class="code-tag">${u.code}</span></td><td><button class="btn btn-red" onclick="deleteUser('${u.code}','${u.name}')">Remove</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function addUser() {
+  const name = document.getElementById('new-name').value.trim();
+  const code = document.getElementById('new-code').value.trim();
+  const msg  = document.getElementById('add-msg');
+  if (!name || !code) { msg.textContent = 'Both fields are required.'; msg.className = 'msg err'; return; }
+  try {
+    const res  = await fetch('/dashboard/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,code}) });
+    const data = await res.json();
+    if (data.ok) {
+      msg.textContent = `✓ ${name} added.`; msg.className = 'msg ok';
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-code').value = '';
+      loadUsers();
+    } else { msg.textContent = data.error || 'Failed.'; msg.className = 'msg err'; }
+  } catch { msg.textContent = 'Server error.'; msg.className = 'msg err'; }
+  setTimeout(() => msg.textContent = '', 4000);
+}
+
+async function deleteUser(code, name) {
+  if (!confirm(`Remove ${name} (${code})?`)) return;
+  try {
+    await fetch(`/dashboard/api/users/${encodeURIComponent(code)}`, { method:'DELETE' });
+    loadUsers(); toast('User removed.');
+  } catch { toast('Failed to remove.', true); }
+}
+
+document.getElementById('new-name').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('new-code').focus(); });
+document.getElementById('new-code').addEventListener('keydown', e => { if (e.key==='Enter') addUser(); });
+
+// ── KNOWLEDGE ──
+const SCHEMA = {
+  wifi:      ['Network Name','Password','Login Required','Username','Login Password','Notes'],
+  passwords: ['System / Software','Username','Password','URL / Location','Notes'],
+  eskool:    ['Issue','Solution','Notes'],
+  devices:   ['Device Type','Location / Model','Common Issue','Solution','Notes'],
+  contacts:  ['Name','Role','WhatsApp / Phone','Handles']
+};
+const TEXT_AREAS = ['Solution','Notes','Handles'];
+let kdata = {};
+
+async function loadKnowledge() {
+  for (const key of Object.keys(SCHEMA)) {
+    try {
+      const res = await fetch('/dashboard/api/knowledge/' + key);
+      kdata[key] = res.ok ? await res.json() : [];
+    } catch { kdata[key] = []; }
+    renderKTable(key);
+  }
+}
+
+function renderKTable(key) {
+  const tbody   = document.getElementById(key + '-body');
+  const countEl = document.getElementById(key + '-count');
+  const cols    = SCHEMA[key];
+  const rows    = kdata[key] || [];
+  if (countEl) countEl.textContent = rows.length + ' entries';
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length+1}"><div class="loading-state">No entries yet. Add one below.</div></td></tr>`; return;
+  }
+  tbody.innerHTML = rows.map((row, i) =>
+    '<tr>' + cols.map(col => {
+      const isTA = TEXT_AREAS.includes(col);
+      const val  = (row[col]||'').toString().replace(/"/g,'&quot;').replace(/</g,'&lt;');
+      return isTA
+        ? `<td><textarea data-key="${key}" data-row="${i}" data-col="${col}" oninput="updateCell(this)" rows="2">${row[col]||''}</textarea></td>`
+        : `<td><input type="text" data-key="${key}" data-row="${i}" data-col="${col}" oninput="updateCell(this)" value="${val}"></td>`;
+    }).join('') +
+    `<td class="k-actions"><button class="btn btn-red" onclick="deleteKRow('${key}',${i})">✕</button></td></tr>`
+  ).join('');
+}
+
+function updateCell(el) {
+  const {key,row,col} = el.dataset;
+  if (!kdata[key][+row]) kdata[key][+row] = {};
+  kdata[key][+row][col] = el.value;
+}
+
+function addRow(key, cols) {
+  if (!kdata[key]) kdata[key] = [];
+  const r = {}; cols.forEach(c => r[c]='');
+  kdata[key].push(r); renderKTable(key);
+  const inputs = document.getElementById(key+'-body').querySelectorAll('input,textarea');
+  const start  = (kdata[key].length-1) * cols.length;
+  if (inputs[start]) inputs[start].focus();
+}
+
+function deleteKRow(key, i) {
+  kdata[key].splice(i,1); renderKTable(key); toast('Row deleted.');
+}
+
+async function saveAll() {
+  let ok = true;
+  for (const key of Object.keys(SCHEMA)) {
+    try {
+      const res = await fetch('/dashboard/api/knowledge/'+key, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(kdata[key]||[]) });
+      if (!res.ok) ok = false;
+    } catch { ok=false; }
+  }
+  toast(ok ? '✓ All changes saved. Restart bot to apply.' : '⚠ Some files failed to save.', !ok);
+}
+
+function switchKTab(name, btn) {
+  document.querySelectorAll('.ktab').forEach(t => t.style.display='none');
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ktab-'+name).style.display='block';
+  btn.classList.add('active');
+  if (name==='quick') renderQuickFields();
+}
+
+function renderQuickFields() {
+  const cat  = document.getElementById('quick-category').value;
+  const cols = SCHEMA[cat]; if (!cols) return;
+  const grid = cols.length<=2 ? 'two-col' : cols.length<=3 ? 'three-col' : 'two-col';
+  document.getElementById('quick-fields').innerHTML =
+    `<div class="${grid}">` + cols.map(col => {
+      const id  = 'qf-'+col.replace(/[ \/]/g,'_');
+      const isTA = TEXT_AREAS.includes(col);
+      return `<div class="field"><label>${col}</label>${isTA?`<textarea id="${id}" placeholder="${col}..."></textarea>`:`<input type="text" id="${id}" placeholder="${col}...">`}</div>`;
+    }).join('') + '</div>';
+}
+
+function quickAdd() {
+  const cat=document.getElementById('quick-category').value, cols=SCHEMA[cat];
+  const row={}; let hasVal=false;
+  cols.forEach(col => {
+    const el=document.getElementById('qf-'+col.replace(/[ \/]/g,'_'));
+    row[col]=el?el.value.trim():''; if(row[col]) hasVal=true;
+  });
+  if (!hasVal) { toast('Fill in at least one field.',true); return; }
+  if (!kdata[cat]) kdata[cat]=[];
+  kdata[cat].push(row); renderKTable(cat);
+  cols.forEach(col => { const el=document.getElementById('qf-'+col.replace(/[ \/]/g,'_')); if(el) el.value=''; });
+  toast(`✓ Added to ${cat} — click Save All to persist.`);
+}
+
+// ── TOAST ──
+function toast(msg, isErr=false) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show'+(isErr?' err':'');
+  setTimeout(()=>el.classList.remove('show'),3200);
+}
+
+// ── INIT ──
+loadUsers(); loadKnowledge(); renderQuickFields();
+</script>
+</body>
+</html>

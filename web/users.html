@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CHS.ai — User Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:    #2d5a27;
+      --green-lt: #4a8c3f;
+      --green-bg: #f2faf0;
+      --green-d:  #e2f2de;
+      --border:   #c8e0c4;
+      --white:    #ffffff;
+      --text:     #1e3d1a;
+      --text-mid: #4a6644;
+      --text-lt:  #7a9876;
+      --shadow:   rgba(45,90,39,0.10);
+      --shadow-md:rgba(45,90,39,0.18);
+      --red:      #c0392b;
+      --red-lt:   #fdf0ee;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--green-bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--green); }
+    .header-sub { font-size: 13px; color: var(--text-lt); }
+    .header-divider { width: 1px; height: 20px; background: var(--border); }
+    .nav-link {
+      font-size: 13px; color: var(--text-mid);
+      text-decoration: none; padding: 6px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .nav-link:hover { border-color: var(--green); color: var(--green); }
+
+    /* MAIN */
+    main {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .page-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px; color: var(--green);
+      margin-bottom: 6px;
+    }
+    .page-sub { font-size: 14px; color: var(--text-mid); margin-bottom: 32px; font-weight: 300; }
+
+    /* ADD USER CARD */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 500;
+      color: var(--text-mid); text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 18px;
+    }
+    .form-row { display: flex; gap: 12px; align-items: flex-end; }
+    .form-field { flex: 1; }
+    .form-field label {
+      display: block; font-size: 11.5px; font-weight: 500;
+      color: var(--text-mid); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .form-field input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: 9px;
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      color: var(--text); background: var(--green-bg); outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .form-field input:focus {
+      border-color: var(--green-lt); background: var(--white);
+      box-shadow: 0 0 0 3px rgba(45,90,39,0.10);
+    }
+    .form-field input::placeholder { color: var(--text-lt); }
+
+    .btn-add {
+      padding: 11px 22px;
+      background: var(--green); color: white;
+      border: none; border-radius: 9px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.2s, box-shadow 0.2s;
+      align-self: flex-end;
+      height: 44px;
+    }
+    .btn-add:hover { background: var(--green-lt); box-shadow: 0 4px 12px var(--shadow-md); }
+
+    #add-message {
+      font-size: 13px; margin-top: 12px; min-height: 18px;
+    }
+    #add-message.success { color: var(--green); }
+    #add-message.error   { color: var(--red); }
+
+    /* USERS TABLE */
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .user-count {
+      font-size: 13px; color: var(--text-lt);
+    }
+
+    table {
+      width: 100%; border-collapse: collapse;
+    }
+    thead tr {
+      border-bottom: 2px solid var(--border);
+    }
+    th {
+      text-align: left; padding: 10px 16px;
+      font-size: 11.5px; font-weight: 500;
+      color: var(--text-mid); text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--green-d);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: var(--green-bg); }
+    tbody tr:last-child { border-bottom: none; }
+    td {
+      padding: 13px 16px;
+      font-size: 14px; color: var(--text);
+    }
+    td.code {
+      font-family: monospace; font-size: 13px;
+      color: var(--green); background: var(--green-d);
+      border-radius: 6px; padding: 4px 10px;
+      display: inline-block; margin: 0;
+    }
+    .btn-delete {
+      padding: 5px 12px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12.5px; color: var(--text-lt);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .btn-delete:hover {
+      border-color: var(--red); color: var(--red);
+      background: var(--red-lt);
+    }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--text-lt); font-size: 14px;
+    }
+
+    #loading { text-align: center; padding: 30px; color: var(--text-lt); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-title">CHS.ai</div>
+    <div class="header-divider"></div>
+    <div class="header-sub">User Management</div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a href="/dashboard/chat" class="nav-link">→ Open Chat</a>
+    <a href="/dashboard" class="nav-link">Dashboard</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">Users</div>
+  <div class="page-sub">Manage who can access the CHS.ai web chat.</div>
+
+  <!-- Add User -->
+  <div class="card">
+    <div class="card-title">Add New User</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Name</label>
+        <input type="text" id="new-name" placeholder="e.g. Mr. Jean" />
+      </div>
+      <div class="form-field">
+        <label>Access Code</label>
+        <input type="text" id="new-code" placeholder="e.g. JB2526" />
+      </div>
+      <button class="btn-add" onclick="addUser()">Add User</button>
+    </div>
+    <div id="add-message"></div>
+  </div>
+
+  <!-- Users List -->
+  <div class="card">
+    <div class="table-header">
+      <div class="card-title" style="margin:0">Current Users</div>
+      <div class="user-count" id="user-count"></div>
+    </div>
+    <div id="loading">Loading users...</div>
+    <table id="users-table" style="display:none;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Access Code</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none;">No users yet. Add one above.</div>
+  </div>
+</main>
+
+<script>
+  async function loadUsers() {
+    try {
+      const res = await fetch('/dashboard/api/users');
+      const users = await res.json();
+      renderUsers(users);
+    } catch (e) {
+      document.getElementById('loading').textContent = 'Failed to load users.';
+    }
+  }
+
+  function renderUsers(users) {
+    document.getElementById('loading').style.display = 'none';
+    const tbody = document.getElementById('users-tbody');
+    const table = document.getElementById('users-table');
+    const empty = document.getElementById('empty-state');
+    const count = document.getElementById('user-count');
+
+    tbody.innerHTML = '';
+    count.textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
+
+    if (users.length === 0) {
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+
+    table.style.display = 'table';
+    empty.style.display = 'none';
+
+    users.forEach((u, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:var(--text-lt);font-size:13px;">${i + 1}</td>
+        <td><strong>${u.name}</strong></td>
+        <td><span class="code">${u.code}</span></td>
+        <td><button class="btn-delete" onclick="deleteUser('${u.code}', '${u.name}')">Remove</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function addUser() {
+    const name = document.getElementById('new-name').value.trim();
+    const code = document.getElementById('new-code').value.trim();
+    const msg  = document.getElementById('add-message');
+
+    if (!name || !code) {
+      msg.textContent = 'Both name and code are required.';
+      msg.className = 'error';
+      return;
+    }
+
+    try {
+      const res = await fetch('/dashboard/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, code })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        msg.textContent = `✓ ${name} added successfully.`;
+        msg.className = 'success';
+        document.getElementById('new-name').value = '';
+        document.getElementById('new-code').value = '';
+        loadUsers();
+      } else {
+        msg.textContent = data.error || 'Failed to add user.';
+        msg.className = 'error';
+      }
+    } catch (e) {
+      msg.textContent = 'Server error. Try again.';
+      msg.className = 'error';
+    }
+    setTimeout(() => msg.textContent = '', 4000);
+  }
+
+  async function deleteUser(code, name) {
+    if (!confirm(`Remove ${name} (${code})?`)) return;
+    try {
+      const res = await fetch(`/dashboard/api/users/${encodeURIComponent(code)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) loadUsers();
+    } catch (e) {
+      alert('Failed to remove user.');
+    }
+  }
+
+  // Enter key on inputs
+  document.getElementById('new-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addUser();
+  });
+
+  loadUsers();
+</script>
+</body>
+</html>

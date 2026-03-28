@@ -51,9 +51,9 @@ const GRAY    = '888888';
 const BLACK   = '000000';
 
 // ── Page sizing (A4, 2.5cm margins) ──────────────────────────────────────────
-const MARGIN    = 1418;
-const CONTENT_W = 9070;
-const CONTENT_L = 14002;
+const MARGIN    = 720;    // Narrow margins (1.27cm / 0.5in)
+const CONTENT_W = 10466;  // 11906 - 720*2
+const CONTENT_L = 15398;  // 16838 - 720*2
 
 // ── Borders ───────────────────────────────────────────────────────────────────
 const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: 'c8e0c4' };
@@ -124,6 +124,7 @@ function contentWidth(landscape = false) { return landscape ? CONTENT_L : CONTEN
 // ── Section header: dark green bar, white bold text ───────────────────────────
 function sectionHeader(label, landscape = false) {
   const cw = contentWidth(landscape);
+  const isAr = hasArabic(label);
   return new Table({
     width: { size: cw, type: WidthType.DXA }, columnWidths: [cw],
     rows: [new TableRow({ children: [new TableCell({
@@ -132,8 +133,10 @@ function sectionHeader(label, landscape = false) {
       shading: { fill: DKGREEN, type: ShadingType.CLEAR },
       margins: { top: 80, bottom: 80, left: 180, right: 180 },
       children: [new Paragraph({
-        children: [b(label, { color: WHITE, size: 22 })],
-        spacing: { before: 0, after: 0 }
+        children: [new TextRun({ text: label, font: isAr ? 'Arial' : 'Arial', size: 22, bold: true, color: WHITE })],
+        alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+        spacing: { before: 0, after: 0 },
+        ...(isAr ? { bidi: true } : {})
       })]
     })] })]
   });
@@ -196,6 +199,27 @@ function renderLine(s) {
   });
 }
 
+// ── Render one content line for Quiz (Times New Roman, 11pt questions, 12pt instructions) ──
+function renderLineQuiz(s) {
+  const isOption    = /^[a-d]\)/i.test(s.trim());
+  const isBlankLine = /^_{5,}/.test(s.trim());
+  const isMathStep  = /^\s*→/.test(s);
+  const isArabic    = hasArabic(s);
+
+  const runs = (isBlankLine || isArabic)
+    ? [t(s, { size: isOption ? 20 : 22, color: isBlankLine ? 'aaaaaa' : BLACK, font: isArabic ? 'Arial' : 'Times New Roman' })]
+    : parseInline(s, { size: isOption ? 20 : 22, font: 'Times New Roman' });
+
+  return new Paragraph({
+    children: runs,
+    indent: (isOption || isMathStep) ? { left: 560 } : undefined,
+    alignment: isArabic ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    spacing: { before: isOption ? 20 : 60, after: isOption ? 20 : 40 },
+    keepLines: true,
+    ...(isArabic ? { bidi: true } : {})
+  });
+}
+
 // ── Table builder ─────────────────────────────────────────────────────────────
 function buildTable(tableSpec, landscape = false) {
   const { headers = [], rows = [], caption = '' } = tableSpec;
@@ -252,32 +276,32 @@ function cleanDocxTrailingParas(srcPath, dstPath) {
   const sectStart = xml.lastIndexOf('<w:sectPr');
   if (sectStart === -1) { zip.writeZip(dstPath); return; }
 
-  // Find the last meaningful content before sectPr
-  // Could end with </w:tbl> (Test/Exam covers) or </w:p> containing real content (Quiz cover)
   const beforeSect = xml.slice(0, sectStart);
 
-  // Find last </w:tbl> or last </w:p> that has actual content (not just pPr)
+  // Find last table end
   const lastTbl = beforeSect.lastIndexOf('</w:tbl>');
+  const lastTblEnd = lastTbl >= 0 ? lastTbl + '</w:tbl>'.length : -1;
 
-  // Find last </w:p> that contains actual runs (has </w:r> or <w:pict>)
+  // Find last paragraph with REAL content (has a run, drawing, pict, or textbox)
   let lastContentPEnd = -1;
-  const pEndPositions = [];
   let pos = 0;
   while (true) {
-    const pStart = beforeSect.indexOf('<w:p ', pos);
+    const pStart = beforeSect.indexOf('<w:p', pos);
     if (pStart === -1) break;
     const pEnd = beforeSect.indexOf('</w:p>', pStart);
     if (pEnd === -1) break;
     const pChunk = beforeSect.slice(pStart, pEnd + 6);
-    // Has real content if it contains a run, drawing, or pict
-    if (pChunk.includes('</w:r>') || pChunk.includes('</w:pict>') || pChunk.includes('</w:drawing>')) {
-      lastContentPEnd = pEnd + 6;
-    }
+    const hasContent = pChunk.includes('</w:r>') ||
+                       pChunk.includes('</w:pict>') ||
+                       pChunk.includes('</w:drawing>') ||
+                       pChunk.includes('</v:shape>') ||
+                       pChunk.includes('</mc:AlternateContent>');
+    if (hasContent) lastContentPEnd = pEnd + 6;
     pos = pEnd + 6;
   }
 
-  // Use whichever comes last: table end or content paragraph end
-  const cutPoint = Math.max(lastTbl + '</w:tbl>'.length, lastContentPEnd);
+  // Cut point = end of last real content (table or paragraph)
+  const cutPoint = Math.max(lastTblEnd, lastContentPEnd);
 
   if (cutPoint > 0 && cutPoint < sectStart) {
     xml = xml.slice(0, cutPoint) + xml.slice(sectStart);
@@ -305,7 +329,8 @@ function initCovers() {
 
     if (srcMtime > cleanMtime) {
       try {
-        if (AdmZip) {
+        if (AdmZip && type !== 'quiz') {
+          // Quiz cover is handled differently in merge — don't strip, use as-is
           cleanDocxTrailingParas(srcPath, cleanPath);
           console.log(`[CHS.ai] Cover cleaned and cached: ${type}`);
         } else {
@@ -384,21 +409,65 @@ function mergeWithCover(coverType, contentBuffer) {
       contentZip.updateFile('word/_rels/document.xml.rels', Buffer.from(contentRels, 'utf8'));
     }
 
+    // ── Step 3b: merge missing namespaces from cover into content doc ─────
+    // Cover may use namespace prefixes (w14, w16du, oel, etc.) not declared in content
+    const coverNsMatch   = coverXml.match(/<w:document([^>]+)>/);
+    const contentNsMatch = contentXml.match(/<w:document([^>]+)>/);
+    if (coverNsMatch && contentNsMatch) {
+      const coverNsStr   = coverNsMatch[1];
+      const contentNsStr = contentNsMatch[1];
+      // Extract all xmlns:xxx declarations from cover
+      const coverNsDecls = [...coverNsStr.matchAll(/xmlns:[a-zA-Z0-9]+="[^"]+"/g)].map(m => m[0]);
+      // Find which ones are missing from content
+      const missingNs = coverNsDecls.filter(ns => !contentNsStr.includes(ns));
+      if (missingNs.length > 0) {
+        // Inject missing namespaces into content <w:document> tag
+        contentXml = contentXml.replace(
+          '<w:document' + contentNsStr + '>',
+          '<w:document' + contentNsStr + ' ' + missingNs.join(' ') + '>'
+        );
+      }
+    }
+
     // ── Step 4: inject cover body into content ────────────────────────────
     const coverBodyStart = coverXml.indexOf('<w:body>') + '<w:body>'.length;
-    const coverSectStart = coverXml.lastIndexOf('<w:sectPr');
-    const coverSectEnd   = coverXml.indexOf('</w:sectPr>') + '</w:sectPr>'.length;
-    const coverBody      = coverXml.slice(coverBodyStart, coverSectStart);
-    const coverSectPr    = coverXml.slice(coverSectStart, coverSectEnd);
-
     const contentBodyStart = contentXml.indexOf('<w:body>') + '<w:body>'.length;
-    const sectionBreak     = `<w:p><w:pPr>${coverSectPr}</w:pPr></w:p>`;
 
-    const mergedXml =
-      contentXml.slice(0, contentBodyStart) +
-      coverBody +
-      sectionBreak +
-      contentXml.slice(contentBodyStart);
+    let mergedXml;
+
+    if (coverType === 'quiz') {
+      // Quiz: header sits at TOP of page 1, content flows directly below — no page break
+      // The quiz cover has 2 sectPrs: first one is a section-break paragraph (creates page 2)
+      // We want everything BEFORE that section-break paragraph, but we must cut on a
+      // complete </w:p> boundary to avoid splitting open XML elements (textboxes, drawings)
+
+      const firstSectPrInBody = coverXml.indexOf('<w:sectPr', coverBodyStart);
+      // The section-break paragraph starts with <w:p and contains the sectPr
+      // Walk back from firstSectPr to find the opening <w:p of that paragraph
+      const sectBreakParaStart = coverXml.lastIndexOf('<w:p ', firstSectPrInBody);
+      // Everything before that paragraph — but find the last COMPLETE </w:p> before it
+      const lastCompleteParaEnd = coverXml.lastIndexOf('</w:p>', sectBreakParaStart);
+      const coverPage1Body = coverXml.slice(coverBodyStart, lastCompleteParaEnd + 6);
+
+      // Inject cover page 1 content at top of content doc, no section break
+      mergedXml =
+        contentXml.slice(0, contentBodyStart) +
+        coverPage1Body +
+        contentXml.slice(contentBodyStart);
+    } else {
+      // Test/Exam: cover is full page 1, content starts page 2 — use section break
+      const coverSectStart = coverXml.lastIndexOf('<w:sectPr');
+      const coverSectEnd   = coverXml.indexOf('</w:sectPr>') + '</w:sectPr>'.length;
+      const coverBody      = coverXml.slice(coverBodyStart, coverSectStart);
+      const coverSectPr    = coverXml.slice(coverSectStart, coverSectEnd);
+      const sectionBreak   = `<w:p><w:pPr>${coverSectPr}</w:pPr></w:p>`;
+
+      mergedXml =
+        contentXml.slice(0, contentBodyStart) +
+        coverBody +
+        sectionBreak +
+        contentXml.slice(contentBodyStart);
+    }
 
     contentZip.updateFile('word/document.xml', Buffer.from(mergedXml, 'utf8'));
 
@@ -563,12 +632,17 @@ function buildGeneric(spec) {
   const {
     title = '', subtitle = '', sections = [],
     footer_note = '', landscape = false, table,
-    docCategory = 'worksheet'
+    docCategory = 'worksheet',
+    worksheetMode = 'standard'  // #37: 'simple' | 'standard' | 'polished'
   } = spec;
 
   const type = (docCategory || '').toLowerCase();
   const isAssessment = ['test', 'exam', 'quiz'].includes(type);
   const isWorksheet  = type === 'worksheet';
+
+  // Detect if document is primarily Arabic
+  const allText = [title, subtitle, ...sections.flatMap(s => [s.title || '', ...(Array.isArray(s.content) ? s.content : [])])].join(' ');
+  const isArabicDoc = hasArabic(allText) && (allText.match(/[؀-ۿ]/g) || []).length > (allText.length * 0.2);
 
   const children = [];
 
@@ -576,11 +650,13 @@ function buildGeneric(spec) {
   if (!isAssessment && title) {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [b(title, { size: 28, color: DKGREEN })],
-      spacing: { before: 0, after: subtitle ? 60 : 120 }
+      children: [b(title, { size: 28, color: DKGREEN, font: isArabicDoc ? 'Arial' : 'Arial' })],
+      spacing: { before: 0, after: subtitle ? 60 : 120 },
+      ...(isArabicDoc ? { bidi: true } : {})
     }));
   }
-  if (subtitle) {
+  // Quiz: no subtitle — time/marks already shown on the cover header
+  if (subtitle && type !== 'quiz') {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [a(subtitle, { size: 20, italics: true, color: MDGREEN })],
@@ -601,7 +677,8 @@ function buildGeneric(spec) {
   }
 
   // Student info row — worksheets only
-  if (isWorksheet) {
+  // #37: 'simple' mode skips student info row; 'polished' adds decorative top border
+  if (isWorksheet && worksheetMode !== 'simple') {
     const half = Math.floor(CONTENT_W / 2);
     children.push(new Table({
       width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [half, half],
@@ -626,14 +703,24 @@ function buildGeneric(spec) {
   // Sections
   for (const section of sections) {
     if (section.title) {
-      children.push(sectionHeader(section.title.toUpperCase(), landscape));
-      children.push(spacer(80));
+      if (isAssessment && type === 'quiz') {
+        // Quiz: plain bold underlined black text, no green box, 12pt
+        children.push(new Paragraph({
+          children: [new TextRun({ text: section.title.toUpperCase(), font: 'Times New Roman', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })],
+          spacing: { before: 160, after: 80 }
+        }));
+      } else {
+        children.push(sectionHeader(section.title.toUpperCase(), landscape));
+        children.push(spacer(80));
+      }
     }
     const items = typeof section.content === 'string'
       ? section.content.split('\n').filter(l => l.trim())
       : (Array.isArray(section.content) ? section.content.map(String) : []);
     if (items.length) {
-      children.push(sectionContent(items.map(renderLine), landscape));
+      // Quiz uses 11pt for questions, others use standard sizes
+      const renderFn = (isAssessment && type === 'quiz') ? renderLineQuiz : renderLine;
+      children.push(sectionContent(items.map(renderFn), landscape));
     }
     if (section.table) {
       children.push(spacer(80));
@@ -655,9 +742,19 @@ function buildGeneric(spec) {
 
   return new Document({
     numbering: NUMBERING,
-    styles: { default: { document: { run: { font: 'Times New Roman', size: 24 } } } },
+    styles: {
+      default: {
+        document: {
+          run: { font: isArabicDoc ? 'Arial' : 'Times New Roman', size: 24 },
+          ...(isArabicDoc ? { paragraph: { bidi: true } } : {})
+        }
+      }
+    },
     sections: [{
-      properties: { page: pageProps(landscape) },
+      properties: {
+        page: pageProps(landscape),
+        ...(isArabicDoc ? { bidi: true } : {})
+      },
       footers: { default: makeFooter() },
       children
     }]
@@ -694,7 +791,29 @@ async function generateDocument(documentSpec) {
   const filepath = path.join(OUTPUT_DIR, filename);
 
   fs.writeFileSync(filepath, finalBuffer);
-  return { filename, filepath, downloadPath: `/api/download/${filename}` };
+
+  // ── #31: Preview metadata ─────────────────────────────────────────────────
+  const fileSizeKB  = Math.round(finalBuffer.length / 1024);
+  const sectionCount = Array.isArray(documentSpec.sections) ? documentSpec.sections.length :
+                       (documentSpec.lesson ? 6 : documentSpec.letter ? 1 : 0);
+  const estPages    = Math.max(1, Math.ceil(sectionCount / 3));
+  const docType     = category || type || 'document';
+  const typeLabel   = { test:'Test', exam:'Exam', quiz:'Quiz', worksheet:'Worksheet',
+                        handout:'Handout', lesson_plan:'Lesson Plan', letter:'Letter/Circular',
+                        circular:'Circular' }[docType] || 'Document';
+
+  return {
+    filename,
+    filepath,
+    downloadPath: `/api/download/${filename}`,
+    preview: {
+      title:     title,
+      type:      typeLabel,
+      sections:  sectionCount,
+      estPages:  estPages,
+      sizeKB:    fileSizeKB,
+    }
+  };
 }
 
 module.exports = { generateDocument };

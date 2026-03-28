@@ -11,6 +11,12 @@ const dashboard = require('./web/routes');
 const PORT = process.env.PORT || 3000;
 
 app.use('/dashboard', dashboard);
+app.get('/favicon.ico', (req, res) => {
+  const path = require('path');
+  const fs   = require('fs');
+  const fp   = path.join(__dirname, 'web', 'favicon.ico');
+  fs.existsSync(fp) ? res.sendFile(fp) : res.status(204).end();
+});
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, () => {

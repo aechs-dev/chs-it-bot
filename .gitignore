@@ -10,4 +10,4 @@ generated_docs/
 .webjs_cache/
 .vscode/
 .cache/
-*.log
+*.log.wwebjs_auth/ 

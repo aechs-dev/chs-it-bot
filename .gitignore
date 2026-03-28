@@ -12,3 +12,4 @@ generated_docs/
 .cache/
 *.log.wwebjs_auth/ 
 .wwebjs_cache/ 
+node_modules/ 

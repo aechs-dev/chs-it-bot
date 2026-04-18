@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHS.ai | Notifications</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e4f0e9;--panel:#f2fbf6;--ink:#151515;--muted:#665f54;--line:rgba(21,21,21,.1);--moss:#1B6358;--mossSoft:#dff2e7;--amber:#b56b28;--amberSoft:#f9ead7;--clay:#9b4832;--claySoft:#f8e2da;--sky:#355d7a;--skySoft:#ddeaf3;--shadow:0 24px 48px rgba(58,40,19,.14);--radius:24px;--white:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Instrument Sans',sans-serif;color:var(--ink);min-height:100vh;background:radial-gradient(circle at top left,rgba(27,99,88,.13),transparent 28%),radial-gradient(circle at top right,rgba(27,99,88,.14),transparent 28%),linear-gradient(180deg,#eaf4ef 0%,#deeae5 100%)}
+a{text-decoration:none;color:inherit}
+button,input,select,textarea{font:inherit}
+.shell{width:min(1440px,calc(100vw - 32px));margin:0 auto}
+.top{position:sticky;top:0;z-index:20;background:rgba(226,242,232,.9);backdrop-filter:blur(14px);border-bottom:1px solid rgba(21,21,21,.06)}
+.topIn{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;flex-wrap:wrap}
+.brand-lockup{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand-mark{width:36px;height:36px;object-fit:contain;border-radius:4px}
+.brand-copy{display:flex;flex-direction:column;line-height:1;gap:2px}
+.brand-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--ink)}
+.brand-subtitle{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.nav a,.btn{border:none;border-radius:999px;padding:11px 16px;cursor:pointer;font-size:.9rem}
+.nav a{color:var(--muted);display:inline-block}
+.nav a:hover,.nav a.active{background:rgba(21,21,21,.06);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.soft{background:rgba(21,21,21,.06);color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* page content */
+.page{padding:28px 0 48px}
+.page-header{margin-bottom:24px}
+.page-title{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:-.04em;color:var(--ink)}
+.page-sub{font-size:.9rem;color:var(--muted);margin-top:4px}
+
+.stack{display:grid;gap:16px}
+.panel{background:rgba(255,250,242,.82);border:1px solid rgba(21,21,21,.08);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card{padding:20px 24px}
+
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.card-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;letter-spacing:-.02em}
+.card-sub{font-size:.82rem;color:var(--muted);margin-top:3px}
+
+.fields{display:grid;gap:14px}
+.field{display:grid;gap:7px}
+.field label{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.field input,.field textarea,.field select{width:100%;padding:13px 15px;border-radius:14px;border:1.5px solid rgba(21,21,21,.1);background:#fff;outline:none;color:var(--ink);transition:border-color .15s}
+.field input:focus,.field textarea:focus{border-color:var(--moss)}
+.field textarea{min-height:90px;resize:vertical;line-height:1.5}
+.char-counter{font-size:.74rem;color:var(--muted);text-align:right;margin-top:3px}
+.char-counter.warn{color:var(--clay)}
+
+.radio-group{display:flex;gap:10px;flex-wrap:wrap}
+.radio-pill{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:999px;border:1.5px solid rgba(21,21,21,.1);background:#fff;cursor:pointer;font-size:.88rem;transition:border-color .15s,background .15s}
+.radio-pill input{display:none}
+.radio-pill.selected{border-color:var(--moss);background:var(--mossSoft);color:var(--moss);font-weight:600}
+.radio-dot{width:10px;height:10px;border-radius:50%;border:2px solid currentColor;flex-shrink:0}
+.radio-pill.selected .radio-dot{background:var(--moss);border-color:var(--moss)}
+
+#specificCodeRow{display:none}
+
+.action-row{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap}
+.result-msg{font-size:.88rem;padding:10px 14px;border-radius:12px;display:none}
+.result-msg.success{background:var(--mossSoft);color:var(--moss);display:block}
+.result-msg.error{background:var(--claySoft);color:var(--clay);display:block}
+
+/* device count card */
+.device-stat{display:flex;align-items:center;gap:16px}
+.stat-number{font-family:'Space Grotesk',sans-serif;font-size:2.4rem;font-weight:700;color:var(--moss)}
+.stat-label{font-size:.88rem;color:var(--muted);line-height:1.4}
+.stat-label strong{display:block;font-size:.95rem;color:var(--ink)}
+
+.device-list{margin-top:14px;display:grid;gap:6px}
+.device-item{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-radius:12px;background:#fff;border:1px solid rgba(21,21,21,.07);font-size:.84rem}
+.device-code{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--moss)}
+.device-status{font-size:.74rem;padding:3px 9px;border-radius:999px}
+.device-status.has-token{background:var(--mossSoft);color:var(--moss)}
+.device-status.no-token{background:rgba(21,21,21,.05);color:var(--muted)}
+
+.empty{padding:18px;border-radius:14px;background:rgba(21,21,21,.03);color:var(--muted);text-align:center;font-size:.88rem}
+
+.toast{position:fixed;right:20px;bottom:20px;z-index:120;padding:12px 16px;border-radius:16px;background:var(--ink);color:#fff;font-size:.88rem;opacity:0;transform:translateY(10px);transition:.2s ease}
+.toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:760px){.shell{width:calc(100vw - 20px)}.card{padding:16px}}
+</style>
+<link rel="stylesheet" href="/dashboard/brand.css?v=20260409-schoolbrand">
+</head>
+<body>
+
+<header class="top">
+  <div class="shell topIn">
+    <a class="brand-lockup" href="/dashboard">
+      <img class="brand-mark" src="/dashboard/logo.jpeg" alt="AECHS logo">
+      <span class="brand-copy">
+        <span class="brand-title">CHS.ai</span>
+        <span class="brand-subtitle">AECHS Staff Assistant</span>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="/dashboard">Command</a>
+      <a href="/dashboard/people">Directory</a>
+      <a href="/dashboard/chat">Chat</a>
+      <a href="/dashboard/admin">Admin</a>
+      <span style="width:1px;height:18px;background:rgba(21,21,21,.15);display:inline-block;margin:0 4px;vertical-align:middle;"></span>
+      <a class="active" href="/dashboard/notifications">Notifications</a>
+    </nav>
+    <div class="nav">
+      <button class="btn soft" onclick="loadDevices()">Refresh</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell page">
+  <div class="page-header">
+    <h1 class="page-title">Push Notifications</h1>
+    <p class="page-sub">Send notifications to staff devices registered with the CHS.ai mobile app.</p>
+  </div>
+
+  <div class="stack">
+
+    <!-- Send Notification -->
+    <div class="panel card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Send Notification</div>
+          <div class="card-sub">Compose and deliver a push notification to one or all registered staff devices.</div>
+        </div>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="notifTitle">Title <span id="titleCounter" class="char-counter">0 / 60</span></label>
+          <input type="text" id="notifTitle" maxlength="60" placeholder="e.g. Schedule Change" oninput="updateCounter('notifTitle','titleCounter',60)">
+        </div>
+
+        <div class="field">
+          <label for="notifBody">Message <span id="bodyCounter" class="char-counter">0 / 200</span></label>
+          <textarea id="notifBody" maxlength="200" placeholder="e.g. Period 3 has been moved to the library today." oninput="updateCounter('notifBody','bodyCounter',200)"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Target</label>
+          <div class="radio-group" id="targetGroup">
+            <label class="radio-pill selected" id="pill-all">
+              <input type="radio" name="target" value="all" checked onchange="onTargetChange(this)">
+              <span class="radio-dot"></span>
+              All Staff
+            </label>
+            <label class="radio-pill" id="pill-specific">
+              <input type="radio" name="target" value="specific" onchange="onTargetChange(this)">
+              <span class="radio-dot"></span>
+              Specific Code(s)
+            </label>
+          </div>
+        </div>
+
+        <div class="field" id="specificCodeRow">
+          <label for="notifCodes">Auth Codes (comma-separated)</label>
+          <input type="text" id="notifCodes" placeholder="e.g. ABC123, XYZ789">
+        </div>
+      </div>
+
+      <div class="action-row" style="margin-top:18px">
+        <button class="btn primary" id="sendBtn" onclick="sendNotification()">Send Notification</button>
+        <div id="sendResult" class="result-msg"></div>
+      </div>
+    </div>
+
+    <!-- Registered Devices -->
+    <div class="panel card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Registered Devices</div>
+          <div class="card-sub">Staff who have logged in on the mobile app and have push tokens registered.</div>
+        </div>
+        <button class="btn soft" onclick="loadDevices()">Refresh</button>
+      </div>
+
+      <div class="device-stat" id="deviceStat">
+        <div class="stat-number" id="deviceCount">—</div>
+        <div class="stat-label">
+          <strong id="deviceCountLabel">Loading...</strong>
+          devices with push tokens registered
+        </div>
+      </div>
+
+      <div class="device-list" id="deviceList">
+        <div class="empty">Loading registered devices...</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth guard ────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/dashboard/api/session');
+    if (!r.ok) { location.href = '/dashboard/chat'; return; }
+    const { session } = await r.json();
+    if (!session?.admin_access) { location.href = '/dashboard/chat'; return; }
+  } catch (_) {
+    location.href = '/dashboard/chat';
+  }
+})();
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+function toast(msg, dur = 2800) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function updateCounter(inputId, counterId, max) {
+  const val = $(inputId).value.length;
+  const el = $(counterId);
+  el.textContent = `${val} / ${max}`;
+  el.classList.toggle('warn', val > max * 0.85);
+}
+
+// ── Target radio pills ────────────────────────────────────────────────────────
+function onTargetChange(radio) {
+  document.querySelectorAll('.radio-pill').forEach(p => p.classList.remove('selected'));
+  radio.closest('.radio-pill').classList.add('selected');
+  $('specificCodeRow').style.display = radio.value === 'specific' ? 'grid' : 'none';
+}
+
+// ── Load devices ──────────────────────────────────────────────────────────────
+async function loadDevices() {
+  $('deviceList').innerHTML = '<div class="empty">Loading...</div>';
+  $('deviceCount').textContent = '—';
+  $('deviceCountLabel').textContent = 'Loading...';
+  try {
+    const r = await fetch('/dashboard/api/admin/push-tokens');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    $('deviceCount').textContent = data.count ?? 0;
+    $('deviceCountLabel').textContent = data.count === 1 ? '1 device' : `${data.count} devices`;
+
+    if (!data.devices || data.devices.length === 0) {
+      $('deviceList').innerHTML = '<div class="empty">No devices registered yet. Staff need to log into the mobile app.</div>';
+      return;
+    }
+
+    $('deviceList').innerHTML = data.devices.map(d => `
+      <div class="device-item">
+        <span class="device-code">${escHtml(d.code)}</span>
+        <span class="device-status ${d.hasToken ? 'has-token' : 'no-token'}">${d.hasToken ? 'Token registered' : 'No token'}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    $('deviceList').innerHTML = `<div class="empty">Failed to load devices: ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── Send notification ─────────────────────────────────────────────────────────
+async function sendNotification() {
+  const title  = $('notifTitle').value.trim();
+  const body   = $('notifBody').value.trim();
+  const target = document.querySelector('input[name="target"]:checked')?.value || 'all';
+  const codesRaw = $('notifCodes').value.trim();
+
+  const resultEl = $('sendResult');
+  resultEl.className = 'result-msg';
+  resultEl.textContent = '';
+
+  if (!title) { showResult('error', 'Title is required.'); return; }
+  if (!body)  { showResult('error', 'Message body is required.'); return; }
+  if (target === 'specific' && !codesRaw) {
+    showResult('error', 'Enter at least one auth code for specific targeting.');
+    return;
+  }
+
+  const authCodes = target === 'specific'
+    ? codesRaw.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const btn = $('sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    const r = await fetch('/dashboard/api/admin/send-notification', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title, body, target, authCodes }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    showResult('success', `Sent to ${data.sent} device${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? ` (${data.failed} failed)` : ''}.`);
+    toast(`Notification sent to ${data.sent} device${data.sent !== 1 ? 's' : ''}.`);
+    // clear form
+    $('notifTitle').value = '';
+    $('notifBody').value  = '';
+    updateCounter('notifTitle', 'titleCounter', 60);
+    updateCounter('notifBody',  'bodyCounter',  200);
+  } catch (e) {
+    showResult('error', e.message || 'Failed to send notification.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Notification';
+  }
+}
+
+function showResult(type, msg) {
+  const el = $('sendResult');
+  el.textContent = msg;
+  el.className = `result-msg ${type}`;
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadDevices();
+</script>
+</body>
+</html>

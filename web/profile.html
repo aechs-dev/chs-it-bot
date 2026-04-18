@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHS.ai | Legacy Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#151515;--muted:#665f54;--moss:#1B6358;--bg:#f2ede3;--panel:#fffaf2;--line:rgba(21,21,21,.1);--shadow:0 24px 48px rgba(58,40,19,.12)}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Instrument Sans',sans-serif;color:var(--ink);min-height:100vh;background:radial-gradient(circle at top left,rgba(27,99,88,.13),transparent 28%),linear-gradient(180deg,#f6f1e8 0%,#efe6d7 100%)}a{text-decoration:none;color:inherit}.shell{width:min(980px,calc(100vw - 32px));margin:0 auto}.top{position:sticky;top:0;background:rgba(242,237,227,.88);backdrop-filter:blur(14px);border-bottom:1px solid rgba(21,21,21,.06)}.topIn{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 0}.brand{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;letter-spacing:-.04em}.brand em{font-style:normal;color:var(--moss)}.nav{display:flex;gap:10px;flex-wrap:wrap}.nav a,.btn{border:none;border-radius:999px;padding:11px 16px;background:rgba(21,21,21,.06);cursor:pointer}.nav a.active,.nav a:hover{color:var(--ink)}.hero,.panel{background:rgba(255,250,242,.82);border:1px solid rgba(21,21,21,.08);border-radius:24px;box-shadow:var(--shadow)}.hero{padding:24px;margin:26px 0 18px}.eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);margin-bottom:12px}.title{font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,4vw,3.5rem);letter-spacing:-.06em;line-height:.95}.copy,.sub,.meta{color:var(--muted);line-height:1.6}.copy{margin-top:14px}.panel{padding:22px}.grid{display:grid;gap:18px;padding-bottom:28px}.mono{font-family:'IBM Plex Mono',monospace}.schedule{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.day{background:#fff;border:1px solid rgba(21,21,21,.08);border-radius:18px;padding:12px}.slot{padding:8px;border-radius:12px;background:rgba(21,21,21,.04);margin-top:8px;font-size:.88rem;line-height:1.5}.empty{padding:22px;text-align:center;color:var(--muted);line-height:1.6}@media(max-width:760px){.shell{width:min(100vw - 20px,980px)}.schedule{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="/dashboard/brand.css?v=20260409-schoolbrand">
+</head>
+<body>
+<header class="top"><div class="shell topIn"><a class="brand brand-lockup" href="/dashboard"><img class="brand-mark" src="/dashboard/logo.jpeg" alt="AECHS logo"><span class="brand-copy"><span class="brand-title">CHS.ai</span><span class="brand-subtitle">AECHS Staff Assistant</span></span></a><nav class="nav"><a href="/dashboard">Command</a><a href="/dashboard/people">Directory</a><a href="/dashboard/chat">Chat</a><a class="active" href="#">Legacy Profile</a></nav></div></header>
+<main class="shell">
+  <section class="hero"><div class="eyebrow">Legacy Code Bridge</div><h1 class="title" id="heroTitle">Resolving Access Code</h1><p class="copy" id="heroCopy">Checking whether this old profile link maps to a current staff record.</p></section>
+  <section class="panel" id="identityCard"><div class="sub">Loading profile details.</div></section>
+  <section class="panel" id="scheduleCard" style="margin-top:18px"><div class="sub">Schedule preview will appear here if this code still maps to a known person.</div></section>
+</main>
+<script>
+const code=decodeURIComponent(location.pathname.split('/').pop());
+const days=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+async function init(){
+  try{
+    const modeRes=await fetch(`/dashboard/api/user-mode?code=${encodeURIComponent(code)}`);
+    const info=await modeRes.json();
+    if(info.person_id){location.replace(`/dashboard/staff/${info.person_id}`);return}
+    document.title=`CHS.ai | ${code}`;
+    document.getElementById('heroTitle').textContent=info.name||'Legacy Access Code';
+    document.getElementById('heroCopy').textContent=info.clearance?`This code still resolves as ${info.clearance}. It no longer has a dedicated editable profile page.`:'This code does not map to a current staff identity.';
+    document.getElementById('identityCard').innerHTML=`
+      <div style="display:grid;gap:10px">
+        <div><strong>Access Code</strong><div class="meta mono">${esc(code)}</div></div>
+        <div><strong>Name</strong><div class="meta">${esc(info.name||'Unknown')}</div></div>
+        <div><strong>Mode</strong><div class="meta">${esc(info.mode||'auto')}</div></div>
+        <div><strong>Clearance</strong><div class="meta">${esc(info.clearance||'Not resolved')}</div></div>
+        <div><strong>Departments</strong><div class="meta">${(info.departments||[]).map(d=>d.name).join(', ')||'None'}</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+          <a class="btn" href="/dashboard/chat">Open Chat</a>
+          <a class="btn" href="/dashboard/people">Open Staff Directory</a>
+          <a class="btn" href="/dashboard/users">Legacy Users</a>
+        </div>
+      </div>`;
+
+    if(info.full_name){
+      const schedRes=await fetch(`/dashboard/api/user-schedule?name=${encodeURIComponent(info.full_name)}`);
+      const sched=await schedRes.json();
+      renderSchedule(sched.schedule||[]);
+    }else{
+      document.getElementById('scheduleCard').innerHTML='<div class="empty">No schedule can be resolved for this legacy code.</div>';
+    }
+  }catch{
+    document.getElementById('heroTitle').textContent='Legacy Profile Unavailable';
+    document.getElementById('heroCopy').textContent='This old route could not be resolved.';
+    document.getElementById('identityCard').innerHTML='<div class="empty">Could not load this legacy profile.</div>';
+    document.getElementById('scheduleCard').innerHTML='<div class="empty">No schedule available.</div>';
+  }
+}
+function renderSchedule(rows){
+  if(!rows.length){document.getElementById('scheduleCard').innerHTML='<div class="empty">No schedule found for this code.</div>';return}
+  const byDay={}; days.forEach(d=>byDay[d]={}); rows.forEach(r=>{byDay[r.day]=byDay[r.day]||{}; byDay[r.day][String(r.period)]=r.class_name||r.class||''});
+  document.getElementById('scheduleCard').innerHTML=`<div class="sub" style="margin-bottom:14px">This is a read-only preview. Active staff profiles now live in the new directory.</div><div class="schedule">${days.map(day=>`<div class="day"><strong>${day}</strong>${['1','2','3','4','5','6','7'].map(p=>`<div class="slot"><span class="meta">P${p}</span><div>${esc(byDay[day]?.[p]||'—')}</div></div>`).join('')}</div>`).join('')}</div>`
+}
+init();
+</script>
+</body>
+</html>

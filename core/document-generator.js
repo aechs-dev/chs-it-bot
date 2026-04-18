@@ -436,20 +436,13 @@ function mergeWithCover(coverType, contentBuffer) {
     let mergedXml;
 
     if (coverType === 'quiz') {
-      // Quiz: header sits at TOP of page 1, content flows directly below — no page break
-      // The quiz cover has 2 sectPrs: first one is a section-break paragraph (creates page 2)
-      // We want everything BEFORE that section-break paragraph, but we must cut on a
-      // complete </w:p> boundary to avoid splitting open XML elements (textboxes, drawings)
+      // Quiz: header table sits at TOP of page 1, content flows directly below.
+      // The quiz cover body is: <w:tbl> ... </w:tbl> <w:p/> <w:sectPr .../>
+      // We want everything BEFORE the final top-level <w:sectPr> (document section props).
+      const finalSectPr = coverXml.lastIndexOf('<w:sectPr');
+      const coverPage1Body = coverXml.slice(coverBodyStart, finalSectPr);
 
-      const firstSectPrInBody = coverXml.indexOf('<w:sectPr', coverBodyStart);
-      // The section-break paragraph starts with <w:p and contains the sectPr
-      // Walk back from firstSectPr to find the opening <w:p of that paragraph
-      const sectBreakParaStart = coverXml.lastIndexOf('<w:p ', firstSectPrInBody);
-      // Everything before that paragraph — but find the last COMPLETE </w:p> before it
-      const lastCompleteParaEnd = coverXml.lastIndexOf('</w:p>', sectBreakParaStart);
-      const coverPage1Body = coverXml.slice(coverBodyStart, lastCompleteParaEnd + 6);
-
-      // Inject cover page 1 content at top of content doc, no section break
+      // Inject cover header at top of content doc body — no section/page break
       mergedXml =
         contentXml.slice(0, contentBodyStart) +
         coverPage1Body +
@@ -471,7 +464,37 @@ function mergeWithCover(coverType, contentBuffer) {
 
     contentZip.updateFile('word/document.xml', Buffer.from(mergedXml, 'utf8'));
 
-    // ── Step 5: write output ──────────────────────────────────────────────
+    // ── Step 5: patch numbering — inject any numId refs from cover that are ──
+    //           missing in the content's numbering.xml (avoids Word repair dialog)
+    try {
+      const contentNumEntry = contentZip.getEntry('word/numbering.xml');
+      if (contentNumEntry) {
+        let contentNumXml = contentNumEntry.getData().toString('utf8');
+        // All numIds referenced in the cover body
+        const coverNumIds = [...new Set(
+          [...coverXml.matchAll(/w:numId w:val="(\d+)"/g)].map(m => parseInt(m[1]))
+        )];
+        // NumIds already defined in the content
+        const definedIds = new Set(
+          [...contentNumXml.matchAll(/<w:num w:numId="(\d+)"/g)].map(m => parseInt(m[1]))
+        );
+        // First abstractNumId available in content (fallback target)
+        const fallbackAbstract = (contentNumXml.match(/w:abstractNumId="(\d+)"/) || ['','0'])[1];
+        const missing = coverNumIds.filter(id => !definedIds.has(id));
+        if (missing.length > 0) {
+          const entries = missing.map(id =>
+            `<w:num w:numId="${id}"><w:abstractNumId w:val="${fallbackAbstract}"/></w:num>`
+          ).join('');
+          contentNumXml = contentNumXml.replace('</w:numbering>', entries + '</w:numbering>');
+          contentZip.updateFile('word/numbering.xml', Buffer.from(contentNumXml, 'utf8'));
+          console.log(`[CHS.ai] Patched numbering: added numIds ${missing} -> abstractNumId ${fallbackAbstract}`);
+        }
+      }
+    } catch(numErr) {
+      console.warn('[CHS.ai] Could not patch numbering:', numErr.message);
+    }
+
+    // ── Step 7: write output ──────────────────────────────────────────────
     const outPath = path.join(OUTPUT_DIR, `_tmp_merged_${Date.now()}.docx`);
     contentZip.writeZip(outPath);
     const result = fs.readFileSync(outPath);

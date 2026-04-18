@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHS.ai — Simulations Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Space Grotesk',sans-serif; }
+
+:root {
+  --bg:       #060a0d;
+  --surface:  #0b1117;
+  --panel:    #0f1720;
+  --border:   #162130;
+  --border2:  #1e2d3d;
+
+  /* Brand */
+  --teal:     #1B6358;
+  --teal-mid: #2a9d84;
+  --teal-lit: #1fc99a;
+
+  /* Electric — Simulations accent */
+  --elec:     #00e5cc;
+  --elec-dim: rgba(0,229,204,0.08);
+  --elec-mid: rgba(0,229,204,0.18);
+  --elec-glow:rgba(0,229,204,0.35);
+
+  /* Text */
+  --text:     #dce8e4;
+  --text-mid: #7a9e96;
+  --text-lt:  #3d5a54;
+
+  /* Subject palette */
+  --phys:  #818cf8;  --phys-d: rgba(129,140,248,0.1);
+  --chem:  #fb923c;  --chem-d: rgba(251,146,60,0.1);
+  --math:  #38bdf8;  --math-d: rgba(56,189,248,0.1);
+  --bio:   #4ade80;  --bio-d:  rgba(74,222,128,0.1);
+}
+
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); }
+
+/* ══════════════════════════════════
+   TOP NAV
+══════════════════════════════════ */
+.topnav {
+  height:52px; display:flex; align-items:center;
+  padding:0 22px; gap:10px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:relative; z-index:20;
+}
+
+.nav-logo {
+  display:flex; align-items:center; gap:9px;
+  font-size:15px; font-weight:700; color:var(--text);
+  text-decoration:none; letter-spacing:-0.2px;
+}
+.logo-mark {
+  width:28px; height:28px; border-radius:8px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  box-shadow:0 0 10px rgba(27,99,88,0.4);
+}
+
+.nav-divider { width:1px; height:22px; background:var(--border2); margin:0 4px; }
+
+.nav-pill {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 13px; border-radius:8px;
+  font-size:12px; font-weight:600; cursor:pointer;
+  border:1px solid transparent; text-decoration:none;
+  transition:all 0.18s;
+}
+.nav-pill.chat-pill {
+  color:var(--text-mid); border-color:var(--border2);
+  background:transparent;
+}
+.nav-pill.chat-pill:hover { color:var(--text); border-color:var(--teal); }
+
+.nav-pill.sim-pill {
+  background:linear-gradient(135deg, var(--teal) 0%, var(--elec) 100%);
+  color:#020d0b; border-color:transparent;
+  box-shadow: 0 0 18px var(--elec-glow), inset 0 1px 0 rgba(255,255,255,0.15);
+  font-weight:700;
+}
+.nav-pill.sim-pill:hover {
+  box-shadow:0 0 28px var(--elec-glow), 0 0 50px rgba(0,229,204,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
+  transform:translateY(-1px);
+}
+
+.nav-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.avatar {
+  width:30px; height:30px; border-radius:8px;
+  background:linear-gradient(135deg,var(--teal),var(--teal-mid));
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:#fff;
+  border:1px solid var(--teal);
+}
+
+/* ══════════════════════════════════
+   SUBJECT BAR
+══════════════════════════════════ */
+.subject-bar {
+  height:44px; display:flex; align-items:center;
+  padding:0 22px; gap:3px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+}
+
+.stab {
+  padding:5px 14px; border-radius:7px;
+  font-size:11.5px; font-weight:600; cursor:pointer;
+  border:1px solid transparent; color:var(--text-mid);
+  transition:all 0.15s; display:flex; align-items:center; gap:5px;
+}
+.stab:hover { color:var(--text); background:rgba(255,255,255,0.04); }
+.stab.active.all   { background:rgba(0,229,204,0.07); border-color:rgba(0,229,204,0.2); color:var(--elec); }
+.stab.active.phys  { background:var(--phys-d); border-color:rgba(129,140,248,0.3); color:var(--phys); }
+.stab.active.chem  { background:var(--chem-d); border-color:rgba(251,146,60,0.3); color:var(--chem); }
+.stab.active.math  { background:var(--math-d); border-color:rgba(56,189,248,0.3); color:var(--math); }
+.stab.active.bio   { background:var(--bio-d);  border-color:rgba(74,222,128,0.3); color:var(--bio); }
+
+.sdot { width:6px; height:6px; border-radius:50%; }
+.phys .sdot { background:var(--phys); }
+.chem .sdot { background:var(--chem); }
+.math .sdot { background:var(--math); }
+.bio  .sdot { background:var(--bio); }
+
+.bar-search {
+  margin-left:auto; display:flex; align-items:center; gap:7px;
+  background:var(--panel); border:1px solid var(--border2);
+  border-radius:7px; padding:5px 11px;
+  transition:border-color 0.15s;
+}
+.bar-search:focus-within { border-color:rgba(0,229,204,0.3); }
+.bar-search svg { flex-shrink:0; }
+.bar-search input {
+  background:transparent; border:none; outline:none;
+  color:var(--text); font-size:12px; width:150px;
+  font-family:'Space Grotesk',sans-serif;
+}
+.bar-search input::placeholder { color:var(--text-lt); }
+
+/* ══════════════════════════════════
+   BODY
+══════════════════════════════════ */
+.body-wrap { display:flex; height:calc(100vh - 52px - 44px); overflow:hidden; }
+
+/* ══════════════════════════════════
+   SIDEBAR
+══════════════════════════════════ */
+.sidebar {
+  width:272px; flex-shrink:0;
+  display:flex; flex-direction:column;
+  background:var(--surface); border-right:1px solid var(--border);
+  overflow:hidden;
+}
+
+.sidebar-scroll { flex:1; overflow-y:auto; overflow-x:hidden; }
+.sidebar-scroll::-webkit-scrollbar { width:3px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+.sb-section { padding:14px 14px 6px; }
+
+.gen-btn {
+  width:100%; padding:10px 0;
+  background:linear-gradient(135deg, var(--teal) 0%, var(--elec) 100%);
+  border:none; border-radius:10px;
+  color:#020d0b; font-size:13px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;
+  transition:all 0.2s; letter-spacing:-0.1px;
+  box-shadow:0 4px 20px rgba(0,229,204,0.2);
+  margin-bottom:12px;
+}
+.gen-btn:hover {
+  box-shadow:0 6px 30px rgba(0,229,204,0.35);
+  transform:translateY(-1px);
+}
+.gen-btn svg { flex-shrink:0; }
+
+.sb-label {
+  font-size:9.5px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--text-lt);
+  margin-bottom:8px; padding:0 2px;
+  display:flex; align-items:center; gap:6px;
+}
+.sb-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Quick-start chips */
+.chip-group { margin-bottom:10px; }
+.subj-row {
+  font-size:9px; font-weight:700; letter-spacing:0.8px;
+  text-transform:uppercase; margin-bottom:5px; padding:0 2px;
+  display:flex; align-items:center; gap:5px;
+}
+.chip-wrap { display:flex; flex-wrap:wrap; gap:4px; }
+.chip {
+  padding:3px 9px; border-radius:20px;
+  font-size:10.5px; font-weight:500; cursor:pointer;
+  border:1px solid; transition:all 0.12s;
+}
+.chip.phys { color:var(--phys); border-color:rgba(129,140,248,0.25); background:var(--phys-d); }
+.chip.phys:hover { background:rgba(129,140,248,0.18); }
+.chip.chem { color:var(--chem); border-color:rgba(251,146,60,0.25); background:var(--chem-d); }
+.chip.chem:hover { background:rgba(251,146,60,0.18); }
+.chip.math { color:var(--math); border-color:rgba(56,189,248,0.25); background:var(--math-d); }
+.chip.math:hover { background:rgba(56,189,248,0.18); }
+.chip.bio  { color:var(--bio);  border-color:rgba(74,222,128,0.25); background:var(--bio-d); }
+.chip.bio:hover  { background:rgba(74,222,128,0.18); }
+
+.sb-divider { height:1px; background:var(--border); margin:6px 0; }
+
+/* Library cards */
+.lib-card {
+  display:flex; align-items:center; gap:9px;
+  padding:8px 10px; border-radius:9px;
+  cursor:pointer; border:1px solid transparent;
+  transition:all 0.13s; margin-bottom:3px;
+}
+.lib-card:hover { background:rgba(255,255,255,0.04); border-color:var(--border2); }
+.lib-card.sel { background:var(--elec-dim); border-color:rgba(0,229,204,0.2); }
+
+.lib-thumb {
+  width:36px; height:28px; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0;
+}
+.lib-info { flex:1; min-width:0; }
+.lib-name { font-size:11.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lib-meta { font-size:10px; color:var(--text-lt); margin-top:1px; }
+
+.lib-badge {
+  font-size:8.5px; font-weight:700; letter-spacing:0.5px;
+  text-transform:uppercase; padding:2px 6px; border-radius:8px;
+  flex-shrink:0; border:1px solid;
+}
+.lb-phys { color:var(--phys); border-color:rgba(129,140,248,0.3); background:var(--phys-d); }
+.lb-chem { color:var(--chem); border-color:rgba(251,146,60,0.3);  background:var(--chem-d); }
+.lb-math { color:var(--math); border-color:rgba(56,189,248,0.3);  background:var(--math-d); }
+.lb-bio  { color:var(--bio);  border-color:rgba(74,222,128,0.3);  background:var(--bio-d); }
+.lb-pre  { color:var(--elec); border-color:rgba(0,229,204,0.3);   background:var(--elec-dim); }
+
+.prebuilt-tag {
+  font-size:8px; font-weight:700; color:var(--elec); letter-spacing:0.4px;
+  display:flex; align-items:center; gap:3px; margin-top:2px;
+}
+
+/* ══════════════════════════════════
+   MAIN AREA
+══════════════════════════════════ */
+.main-area {
+  flex:1; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--bg); position:relative;
+}
+
+/* Viewer header */
+.vw-header {
+  padding:16px 22px 12px; flex-shrink:0;
+  display:flex; align-items:flex-start; justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.vw-title { font-size:17px; font-weight:700; color:var(--text); letter-spacing:-0.3px; }
+.vw-meta { display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+.vw-badge {
+  font-size:9px; font-weight:700; letter-spacing:0.6px;
+  text-transform:uppercase; padding:2px 8px; border-radius:8px;
+  border:1px solid;
+}
+.vw-grade { font-size:11px; color:var(--text-mid); }
+.vw-live {
+  font-size:10px; color:var(--elec); font-weight:600;
+  display:flex; align-items:center; gap:4px;
+}
+.live-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--elec);
+  animation:blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.vw-actions { display:flex; gap:6px; }
+.vbtn {
+  padding:7px 13px; border-radius:8px;
+  font-size:11.5px; font-weight:600; cursor:pointer;
+  border:1px solid; display:flex; align-items:center; gap:5px;
+  transition:all 0.15s;
+}
+.vbtn.ghost { background:transparent; border-color:var(--border2); color:var(--text-mid); }
+.vbtn.ghost:hover { border-color:var(--teal-lit); color:var(--text); }
+.vbtn.elec {
+  background:linear-gradient(135deg,var(--teal),var(--elec));
+  border-color:transparent; color:#020d0b; font-weight:700;
+  box-shadow:0 0 14px rgba(0,229,204,0.25);
+}
+.vbtn.elec:hover { box-shadow:0 0 24px rgba(0,229,204,0.45); transform:translateY(-1px); }
+
+/* Iframe container — fills ALL remaining height */
+.vw-frame {
+  flex:1; overflow:hidden; position:relative;
+  margin:0; background:#060a0d;
+  border-bottom:1px solid var(--border);
+}
+.vw-frame iframe { width:100%; height:100%; border:none; display:block; }
+
+/* Gradient border effect on frame */
+.vw-frame::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(0,229,204,0.03) 0%, transparent 20%);
+  pointer-events:none; z-index:1;
+}
+
+/* Toolbar */
+.vw-toolbar {
+  height:46px; flex-shrink:0;
+  display:flex; align-items:center; gap:6px;
+  padding:0 22px; background:var(--surface);
+  border-top:1px solid var(--border);
+}
+.vtool {
+  padding:5px 12px; border-radius:7px;
+  font-size:11px; font-weight:500; cursor:pointer;
+  border:1px solid var(--border2); color:var(--text-mid);
+  background:transparent; display:flex; align-items:center; gap:4px;
+  transition:all 0.13s;
+}
+.vtool:hover { border-color:var(--teal-lit); color:var(--text); background:rgba(31,201,154,0.05); }
+.vtool.present-btn {
+  background:linear-gradient(135deg,var(--teal),var(--elec));
+  border-color:transparent; color:#020d0b; font-weight:700;
+  box-shadow:0 0 12px rgba(0,229,204,0.2);
+}
+.vtool.present-btn:hover { box-shadow:0 0 20px rgba(0,229,204,0.4); }
+
+.toolbar-sep { width:1px; height:20px; background:var(--border2); margin:0 4px; }
+.toolbar-meta { margin-left:auto; font-size:10.5px; color:var(--text-lt); }
+
+/* ══════════════════════════════════
+   EMPTY / GENERATING STATES
+══════════════════════════════════ */
+.state-center {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px;
+  background:var(--bg);
+}
+.empty-icon-wrap {
+  width:72px; height:72px; border-radius:20px;
+  border:1px solid rgba(0,229,204,0.15);
+  background:var(--elec-dim);
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px;
+}
+.state-title { font-size:16px; font-weight:700; color:var(--text-mid); }
+.state-sub { font-size:12px; color:var(--text-lt); text-align:center; max-width:300px; line-height:1.7; }
+.state-btn {
+  padding:10px 22px; border-radius:10px;
+  background:linear-gradient(135deg,var(--teal),var(--elec));
+  border:none; color:#020d0b; font-size:13px; font-weight:700;
+  cursor:pointer; margin-top:4px;
+  box-shadow:0 4px 18px rgba(0,229,204,0.2); transition:all 0.2s;
+}
+.state-btn:hover { box-shadow:0 6px 28px rgba(0,229,204,0.38); transform:translateY(-1px); }
+
+/* Generating */
+.gen-ring {
+  width:56px; height:56px; border-radius:50%;
+  border:2px solid rgba(0,229,204,0.1);
+  border-top-color:var(--elec);
+  animation:spin 0.85s linear infinite;
+}
+@keyframes spin { to{ transform:rotate(360deg) } }
+.gen-prog {
+  width:200px; height:2px; background:var(--border2); border-radius:2px; overflow:hidden;
+}
+.gen-prog-bar {
+  height:100%; border-radius:2px;
+  background:linear-gradient(90deg,var(--teal),var(--elec));
+  animation:prog 3s ease-in-out infinite;
+}
+@keyframes prog {
+  0%{width:0%;margin-left:0}
+  60%{width:85%;margin-left:0}
+  100%{width:0%;margin-left:100%}
+}
+
+/* ══════════════════════════════════
+   WIZARD
+══════════════════════════════════ */
+.wiz-overlay {
+  position:fixed; inset:0;
+  background:rgba(6,10,13,0.85); backdrop-filter:blur(10px);
+  z-index:100; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.2s;
+}
+.wiz-overlay.open { opacity:1; pointer-events:all; }
+
+.wiz-card {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:18px; width:540px; max-width:94vw;
+  box-shadow:0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,204,0.08);
+  transform:translateY(16px); transition:transform 0.22s;
+  overflow:hidden;
+}
+.wiz-overlay.open .wiz-card { transform:translateY(0); }
+
+.wiz-head {
+  padding:20px 22px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.wiz-htitle { font-size:15px; font-weight:700; }
+
+.wiz-steps { display:flex; gap:5px; align-items:center; }
+.wdot { width:7px; height:7px; border-radius:50%; background:var(--border2); transition:all 0.2s; }
+.wdot.done { background:var(--teal-lit); }
+.wdot.curr { width:20px; border-radius:4px; background:var(--elec); }
+
+.wiz-x {
+  width:26px; height:26px; border-radius:7px; border:1px solid var(--border2);
+  background:transparent; color:var(--text-lt); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+  transition:all 0.13s;
+}
+.wiz-x:hover { border-color:#ef4444; color:#ef4444; }
+
+.wiz-body { padding:22px; }
+.wiz-qlabel { font-size:12px; font-weight:600; color:var(--text-mid); margin-bottom:14px; }
+
+/* Step 1: Subject */
+.subj-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.scard {
+  padding:16px 14px; border-radius:12px; border:1.5px solid var(--border2);
+  cursor:pointer; transition:all 0.14s; background:var(--panel);
+  display:flex; flex-direction:column; gap:7px;
+}
+.scard:hover { transform:translateY(-2px); }
+.scard.phys:hover,.scard.phys.sel { border-color:var(--phys); background:var(--phys-d); }
+.scard.chem:hover,.scard.chem.sel { border-color:var(--chem); background:var(--chem-d); }
+.scard.math:hover,.scard.math.sel { border-color:var(--math); background:var(--math-d); }
+.scard.bio:hover,.scard.bio.sel   { border-color:var(--bio);  background:var(--bio-d); }
+.scard-icon { font-size:26px; }
+.scard-name { font-size:14px; font-weight:700; }
+.scard.phys .scard-name { color:var(--phys); }
+.scard.chem .scard-name { color:var(--chem); }
+.scard.math .scard-name { color:var(--math); }
+.scard.bio  .scard-name { color:var(--bio); }
+.scard-sub  { font-size:10px; color:var(--text-lt); line-height:1.5; }
+
+/* Step 2 Topics */
+.topic-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.tchip {
+  padding:5px 12px; border-radius:20px;
+  font-size:11.5px; font-weight:500; cursor:pointer; border:1px solid; transition:all 0.13s;
+}
+.tchip.phys { color:var(--phys); border-color:rgba(129,140,248,0.25); background:var(--phys-d); }
+.tchip.phys:hover,.tchip.phys.sel { background:rgba(129,140,248,0.2); font-weight:700; border-color:var(--phys); }
+.tchip.chem { color:var(--chem); border-color:rgba(251,146,60,0.25); background:var(--chem-d); }
+.tchip.chem:hover,.tchip.chem.sel { background:rgba(251,146,60,0.2); font-weight:700; border-color:var(--chem); }
+.tchip.math { color:var(--math); border-color:rgba(56,189,248,0.25); background:var(--math-d); }
+.tchip.math:hover,.tchip.math.sel { background:rgba(56,189,248,0.2); font-weight:700; border-color:var(--math); }
+.tchip.bio  { color:var(--bio);  border-color:rgba(74,222,128,0.25); background:var(--bio-d); }
+.tchip.bio:hover,.tchip.bio.sel   { background:rgba(74,222,128,0.2); font-weight:700; border-color:var(--bio); }
+
+.custom-input {
+  width:100%; padding:9px 12px;
+  background:var(--panel); border:1px solid var(--border2);
+  border-radius:9px; color:var(--text); font-size:12.5px; outline:none;
+  font-family:'Space Grotesk',sans-serif; transition:border-color 0.15s;
+}
+.custom-input:focus { border-color:rgba(0,229,204,0.4); }
+.custom-input::placeholder { color:var(--text-lt); }
+
+/* Step 3 Grade */
+.grade-wrap { display:flex; flex-wrap:wrap; gap:6px; }
+.gpill {
+  padding:6px 14px; border-radius:20px;
+  font-size:11.5px; font-weight:500; cursor:pointer;
+  border:1px solid var(--border2); background:var(--panel); color:var(--text-mid);
+  transition:all 0.13s;
+}
+.gpill:hover { border-color:rgba(0,229,204,0.3); color:var(--text); }
+.gpill.sel { background:rgba(0,229,204,0.1); border-color:var(--elec); color:var(--elec); font-weight:700; }
+
+/* Step 4 Focus */
+.focus-wrap { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.fchip {
+  padding:5px 12px; border-radius:20px;
+  font-size:11px; font-weight:500; cursor:pointer;
+  border:1px solid var(--border2); background:var(--panel); color:var(--text-mid);
+  transition:all 0.13s;
+}
+.fchip:hover { border-color:rgba(0,229,204,0.3); color:var(--text); }
+.fchip.sel { background:rgba(0,229,204,0.08); border-color:rgba(0,229,204,0.4); color:var(--elec); }
+.fchip.skip-chip { color:#ef4444; border-color:rgba(239,68,68,0.2); background:rgba(239,68,68,0.05); }
+.fchip.skip-chip:hover { background:rgba(239,68,68,0.12); }
+
+/* Wizard footer */
+.wiz-foot {
+  padding:14px 22px; border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:#090e14;
+}
+.wiz-back-btn {
+  padding:7px 14px; border-radius:8px;
+  border:1px solid var(--border2); background:transparent;
+  color:var(--text-mid); font-size:12px; cursor:pointer;
+  transition:all 0.13s; font-family:'Space Grotesk',sans-serif;
+}
+.wiz-back-btn:hover { border-color:var(--text-mid); color:var(--text); }
+.wiz-next-btn {
+  padding:8px 20px; border-radius:9px;
+  background:linear-gradient(135deg,var(--teal),var(--elec));
+  border:none; color:#020d0b; font-size:12.5px; font-weight:700;
+  cursor:pointer; transition:all 0.18s;
+  box-shadow:0 4px 16px rgba(0,229,204,0.2);
+  font-family:'Space Grotesk',sans-serif; display:flex; align-items:center; gap:6px;
+}
+.wiz-next-btn:hover:not(:disabled) { box-shadow:0 6px 24px rgba(0,229,204,0.38); transform:translateY(-1px); }
+.wiz-next-btn:disabled { opacity:0.35; cursor:default; transform:none; }
+
+/* ══════════════════════════════════
+   PRESENT MODE
+══════════════════════════════════ */
+.present-mode {
+  position:fixed; inset:0; z-index:200; background:#000;
+  display:none; flex-direction:column;
+}
+.present-mode.open { display:flex; }
+.present-mode iframe { flex:1; border:none; }
+.present-bar {
+  height:36px; background:#060a0d; border-top:1px solid #111;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; flex-shrink:0;
+}
+.present-bar span { font-size:11px; color:#2a3a3a; }
+.exit-btn {
+  padding:4px 12px; border-radius:6px;
+  background:#0f1a1a; border:1px solid #1a2a2a; color:#3a5a5a;
+  font-size:11px; cursor:pointer; transition:all 0.15s;
+  font-family:'Space Grotesk',sans-serif;
+}
+.exit-btn:hover { border-color:#ef4444; color:#ef4444; }
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+#toast {
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(8px);
+  background:linear-gradient(135deg,var(--teal),#0d4a3a);
+  border:1px solid rgba(0,229,204,0.3);
+  color:var(--elec); padding:8px 18px; border-radius:20px;
+  font-size:12px; font-weight:600; opacity:0; transition:all 0.25s;
+  pointer-events:none; z-index:999;
+  box-shadow:0 4px 20px rgba(0,229,204,0.15);
+  letter-spacing:0.2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <a class="nav-logo" href="#">
+    <div class="logo-mark">✦</div>
+    CHS.ai
+  </a>
+  <div class="nav-divider"></div>
+  <button class="nav-pill chat-pill" onclick="showToast('Switching to chat…')">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Chat
+  </button>
+  <button class="nav-pill sim-pill">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+    Simulations Lab
+  </button>
+  <div class="nav-right">
+    <div class="avatar">YB</div>
+  </div>
+</nav>
+
+<!-- ══ SUBJECT TABS ══ -->
+<div class="subject-bar">
+  <button class="stab all active" onclick="setTab('all',this)">All</button>
+  <button class="stab phys" onclick="setTab('phys',this)"><span class="sdot"></span>Physics</button>
+  <button class="stab chem" onclick="setTab('chem',this)"><span class="sdot"></span>Chemistry</button>
+  <button class="stab math" onclick="setTab('math',this)"><span class="sdot"></span>Math</button>
+  <button class="stab bio"  onclick="setTab('bio',this)"><span class="sdot"></span>Biology</button>
+  <div class="bar-search">
+    <svg width="12" height="12" fill="none" stroke="#3d5a54" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input placeholder="Search simulations…">
+  </div>
+</div>
+
+<!-- ══ BODY ══ -->
+<div class="body-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-scroll">
+      <div class="sb-section">
+        <button class="gen-btn" onclick="openWiz()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          Generate New Simulation
+        </button>
+
+        <div class="sb-label">⚡ Quick Start</div>
+
+        <div class="chip-group">
+          <div class="subj-row"><span style="width:5px;height:5px;border-radius:50%;background:var(--phys);display:inline-block;"></span>&nbsp;Physics</div>
+          <div class="chip-wrap">
+            <span class="chip phys" onclick="quickLoad('Reflection','phys','Grade 10')">Reflection</span>
+            <span class="chip phys" onclick="quickLoad('Refraction','phys','Grade 10')">Refraction</span>
+            <span class="chip phys" onclick="quickLoad('Pendulum','phys','Grade 9')">Pendulum</span>
+            <span class="chip phys" onclick="quickLoad('Projectile','phys','Grade 10')">Projectile</span>
+            <span class="chip phys" onclick="quickLoad('Diffraction','phys','Grade 11')">Diffraction</span>
+            <span class="chip phys" onclick="quickLoad('Ohm\'s Law','phys','Grade 9')">Ohm's Law</span>
+          </div>
+        </div>
+        <div class="chip-group">
+          <div class="subj-row"><span style="width:5px;height:5px;border-radius:50%;background:var(--chem);display:inline-block;"></span>&nbsp;Chemistry</div>
+          <div class="chip-wrap">
+            <span class="chip chem" onclick="quickLoad('Titration','chem','Grade 10')">Titration</span>
+            <span class="chip chem" onclick="quickLoad('Gas Laws','chem','Grade 10')">Gas Laws</span>
+            <span class="chip chem" onclick="quickLoad('Bohr Atom','chem','Grade 9')">Bohr Atom</span>
+          </div>
+        </div>
+        <div class="chip-group">
+          <div class="subj-row"><span style="width:5px;height:5px;border-radius:50%;background:var(--math);display:inline-block;"></span>&nbsp;Math</div>
+          <div class="chip-wrap">
+            <span class="chip math" onclick="quickLoad('Unit Circle','math','Grade 10')">Unit Circle</span>
+            <span class="chip math" onclick="quickLoad('Quadratic','math','Grade 9')">Quadratic</span>
+            <span class="chip math" onclick="quickLoad('Vectors','math','Grade 11')">Vectors</span>
+          </div>
+        </div>
+
+        <div class="sb-divider"></div>
+
+        <!-- Pre-built library -->
+        <div class="sb-label">📦 Pre-Built Library</div>
+
+        <div id="prebuilt-list">
+          <div class="lib-card sel" onclick="selCard(this,'Law of Reflection','Grade 10','phys')">
+            <div class="lib-thumb" style="background:var(--phys-d);">🔭</div>
+            <div class="lib-info">
+              <div class="lib-name">Law of Reflection</div>
+              <div class="lib-meta">Grade 9–11
+                <span class="prebuilt-tag">✦ Pre-built</span>
+              </div>
+            </div>
+            <span class="lib-badge lb-phys">Physics</span>
+          </div>
+          <div class="lib-card" onclick="selCard(this,'Single-Slit Diffraction','Grade 11','phys')">
+            <div class="lib-thumb" style="background:var(--phys-d);">🌊</div>
+            <div class="lib-info">
+              <div class="lib-name">Single-Slit Diffraction</div>
+              <div class="lib-meta">Grade 11–12
+                <span class="prebuilt-tag">✦ Pre-built</span>
+              </div>
+            </div>
+            <span class="lib-badge lb-phys">Physics</span>
+          </div>
+          <div class="lib-card" onclick="selCard(this,'Simple Pendulum','Grade 9','phys')">
+            <div class="lib-thumb" style="background:var(--phys-d);">🕰️</div>
+            <div class="lib-info">
+              <div class="lib-name">Simple Pendulum</div>
+              <div class="lib-meta">Grade 9–10
+                <span class="prebuilt-tag">✦ Pre-built</span>
+              </div>
+            </div>
+            <span class="lib-badge lb-phys">Physics</span>
+          </div>
+          <div class="lib-card" onclick="selCard(this,'Acid-Base Titration','Grade 10','chem')">
+            <div class="lib-thumb" style="background:var(--chem-d);">⚗️</div>
+            <div class="lib-info">
+              <div class="lib-name">Acid-Base Titration</div>
+              <div class="lib-meta">Grade 10–11
+                <span class="prebuilt-tag">✦ Pre-built</span>
+              </div>
+            </div>
+            <span class="lib-badge lb-chem">Chemistry</span>
+          </div>
+          <div class="lib-card" onclick="selCard(this,'Unit Circle','Grade 10','math')">
+            <div class="lib-thumb" style="background:var(--math-d);">📐</div>
+            <div class="lib-info">
+              <div class="lib-name">Unit Circle</div>
+              <div class="lib-meta">Grade 10–11
+                <span class="prebuilt-tag">✦ Pre-built</span>
+              </div>
+            </div>
+            <span class="lib-badge lb-math">Math</span>
+          </div>
+        </div>
+
+        <div class="sb-divider"></div>
+
+        <!-- My simulations -->
+        <div class="sb-label">🎓 My Simulations</div>
+        <div id="my-list">
+          <div style="padding:16px 4px; text-align:center;">
+            <div style="font-size:10px;color:var(--text-lt);line-height:1.7;">
+              Your generated simulations will appear here.<br>
+              <span style="color:var(--elec);cursor:pointer;" onclick="openWiz()">Generate your first one →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main-area" id="main">
+
+    <!-- Viewer -->
+    <div id="viewer" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%;">
+      <div class="vw-header">
+        <div>
+          <div class="vw-title" id="vw-title">Law of Reflection — Virtual Laboratory</div>
+          <div class="vw-meta">
+            <span class="vw-badge" id="vw-badge" style="background:var(--phys-d);color:var(--phys);border-color:rgba(129,140,248,0.3);">⚛ Physics</span>
+            <span class="vw-grade" id="vw-grade">Grade 10</span>
+            <span class="vw-live"><span class="live-dot"></span>Interactive</span>
+          </div>
+        </div>
+        <div class="vw-actions">
+          <button class="vbtn ghost" onclick="showToast('Opening in new tab…')">↗ New Tab</button>
+          <button class="vbtn elec" onclick="openPresent()">🎓 Present Mode</button>
+        </div>
+      </div>
+
+      <div class="vw-frame">
+        <iframe id="sim-frame" src="reflection.html" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+
+      <div class="vw-toolbar">
+        <button class="vtool" onclick="showToast('Opening fullscreen…')">⛶ Fullscreen</button>
+        <button class="vtool" onclick="showToast('Downloading .html file…')">↓ Download</button>
+        <div class="toolbar-sep"></div>
+        <button class="vtool" onclick="showToast('Kiosk link copied to clipboard!')">🔗 Kiosk Link</button>
+        <button class="vtool present-btn" onclick="openPresent()">🎓 Present Mode</button>
+        <div class="toolbar-meta" id="toolbar-meta">Law of Reflection · Grade 10 · Pre-built · CHS.ai</div>
+      </div>
+    </div>
+
+    <!-- Generating state -->
+    <div id="gen-view" style="display:none;flex:1;flex-direction:column;">
+      <div class="state-center">
+        <div class="gen-ring"></div>
+        <div class="state-title" id="gen-label">Building your simulation…</div>
+        <div class="state-sub" id="gen-sub">Applying physics formulas · Rendering canvas · Wiring controls</div>
+        <div class="gen-prog"><div class="gen-prog-bar"></div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ WIZARD ══ -->
+<div class="wiz-overlay" id="wiz-overlay" onclick="handleBg(event)">
+  <div class="wiz-card" id="wiz-card">
+    <div class="wiz-head">
+      <div class="wiz-htitle" id="wiz-htitle">New Simulation</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="wiz-steps" id="wiz-dots">
+          <div class="wdot curr"></div>
+          <div class="wdot"></div>
+          <div class="wdot"></div>
+          <div class="wdot"></div>
+        </div>
+        <button class="wiz-x" onclick="closeWiz()">✕</button>
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="ws1" class="wiz-body">
+      <div class="wiz-qlabel">Step 1 of 4 — What subject is this for?</div>
+      <div class="subj-grid">
+        <div class="scard phys" onclick="pickSubj('phys',this)">
+          <div class="scard-icon">🔭</div>
+          <div class="scard-name">Physics</div>
+          <div class="scard-sub">Optics · Mechanics · Waves · Electricity</div>
+        </div>
+        <div class="scard chem" onclick="pickSubj('chem',this)">
+          <div class="scard-icon">⚗️</div>
+          <div class="scard-name">Chemistry</div>
+          <div class="scard-sub">Reactions · Atoms · Gas Laws · Titration</div>
+        </div>
+        <div class="scard math" onclick="pickSubj('math',this)">
+          <div class="scard-icon">📐</div>
+          <div class="scard-name">Math</div>
+          <div class="scard-sub">Functions · Geometry · Calculus · Probability</div>
+        </div>
+        <div class="scard bio" onclick="pickSubj('bio',this)">
+          <div class="scard-icon">🌿</div>
+          <div class="scard-name">Biology</div>
+          <div class="scard-sub">Cells · Genetics · Enzymes · Osmosis</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="ws2" class="wiz-body" style="display:none;">
+      <div class="wiz-qlabel" id="ws2-label">Step 2 of 4 — Choose a topic</div>
+      <div class="topic-chips" id="topic-chips"></div>
+      <input class="custom-input" id="topic-custom" placeholder="Or type your own topic…">
+    </div>
+
+    <!-- Step 3 -->
+    <div id="ws3" class="wiz-body" style="display:none;">
+      <div class="wiz-qlabel">Step 3 of 4 — Which grade?</div>
+      <div class="grade-wrap" id="grade-wrap"></div>
+    </div>
+
+    <!-- Step 4 -->
+    <div id="ws4" class="wiz-body" style="display:none;">
+      <div class="wiz-qlabel" id="ws4-label">Step 4 of 4 — Any specific focus? (optional)</div>
+      <div class="focus-wrap" id="focus-chips"></div>
+      <input class="custom-input" id="focus-custom" placeholder="Or describe a specific focus…">
+    </div>
+
+    <div class="wiz-foot">
+      <button class="wiz-back-btn" id="wiz-back" onclick="wizBack()" style="visibility:hidden;">← Back</button>
+      <button class="wiz-next-btn" id="wiz-next" onclick="wizNext()" disabled>Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PRESENT MODE ══ -->
+<div class="present-mode" id="present">
+  <iframe id="present-frame" src="reflection.html"></iframe>
+  <div class="present-bar">
+    <span>CHS.ai · Present Mode · <span id="present-label">Law of Reflection</span></span>
+    <button class="exit-btn" onclick="closePresent()">✕ Exit</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const TOPICS = {
+  phys:['Law of Reflection','Snell\'s Law / Refraction','Single-Slit Diffraction',
+        'Projectile Motion','Simple Pendulum','Newton\'s 2nd Law (F=ma)',
+        'Doppler Effect','Standing Waves','Ohm\'s Law','Photoelectric Effect'],
+  chem:['Acid-Base Titration','Bohr Atomic Model','Boyle\'s Gas Law',
+        'Charles\' Gas Law','Molecular Geometry (VSEPR)','Chemical Equilibrium'],
+  math:['Quadratic Functions','Unit Circle','Trigonometric Graphs',
+        'Linear Functions','Derivatives','Integrals','Vector Addition','Probability'],
+  bio: ['Mitosis Phases','Osmosis & Diffusion','DNA Replication',
+        'Enzyme Kinetics','Action Potential'],
+};
+const FOCUS = {
+  phys:['Angles & measurements','Ray diagrams','Real-life examples',
+        'Energy analysis','Mathematical derivation','Historical context'],
+  chem:['pH curve detail','Colour change animation','Mole calculations',
+        'Molecular structure','Step-by-step procedure'],
+  math:['Visual proof','Step-by-step working','Graph transformations',
+        'Real-world applications','Multiple examples'],
+  bio: ['Phase-by-phase labels','Cell structure detail','Time-lapse style',
+        'Microscope perspective','Comparative view'],
+};
+const COLORS = {
+  phys:{main:'var(--phys)',dim:'var(--phys-d)',border:'rgba(129,140,248,0.3)',label:'⚛ Physics'},
+  chem:{main:'var(--chem)',dim:'var(--chem-d)',border:'rgba(251,146,60,0.3)', label:'⚗ Chemistry'},
+  math:{main:'var(--math)',dim:'var(--math-d)',border:'rgba(56,189,248,0.3)', label:'📐 Math'},
+  bio: {main:'var(--bio)', dim:'var(--bio-d)', border:'rgba(74,222,128,0.3)', label:'🌿 Biology'},
+};
+const ICONS = { phys:'🔭', chem:'⚗️', math:'📐', bio:'🌿' };
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let step=1, selSubj=null, selTopic=null, selGrade=null, selFocus=null;
+
+// ── Subject tabs ──────────────────────────────────────────────────────────────
+function setTab(s, el) {
+  document.querySelectorAll('.stab').forEach(t => {
+    t.className = t.className.split(' ').filter(c=>c!=='active').join(' ');
+  });
+  el.classList.add('active');
+}
+
+// ── Sidebar quick load ────────────────────────────────────────────────────────
+function quickLoad(topic, subj, grade) {
+  updateViewer(topic + ' — Virtual Laboratory', grade, subj, true);
+  showToast('⚡ Loading ' + topic + '…');
+}
+
+// ── Lib card select ───────────────────────────────────────────────────────────
+function selCard(el, title, grade, subj) {
+  document.querySelectorAll('.lib-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  updateViewer(title + ' — Virtual Laboratory', grade, subj, true);
+}
+
+function updateViewer(title, grade, subj, prebuilt) {
+  document.getElementById('vw-title').textContent = title;
+  document.getElementById('vw-grade').textContent = grade;
+  const c = COLORS[subj] || COLORS.phys;
+  const b = document.getElementById('vw-badge');
+  b.style.cssText = `background:${c.dim};color:${c.main};border-color:${c.border};`;
+  b.textContent = c.label;
+  document.getElementById('present-label').textContent = title.split(' —')[0];
+  document.getElementById('toolbar-meta').textContent =
+    title.split(' —')[0] + ' · ' + grade + (prebuilt ? ' · Pre-built' : ' · My Simulation') + ' · CHS.ai';
+}
+
+// ── Wizard ────────────────────────────────────────────────────────────────────
+function openWiz() {
+  step=1; selSubj=selTopic=selGrade=selFocus=null;
+  showStep(1);
+  document.getElementById('wiz-overlay').classList.add('open');
+}
+function closeWiz() { document.getElementById('wiz-overlay').classList.remove('open'); }
+function handleBg(e) { if(e.target===document.getElementById('wiz-overlay')) closeWiz(); }
+
+function showStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('ws'+i).style.display = i===n ? 'block' : 'none';
+  });
+  step = n;
+  updateDots();
+  updateFooter();
+  if(n===2) buildTopics();
+  if(n===3) buildGrades();
+  if(n===4) buildFocus();
+}
+
+function updateDots() {
+  const dots = document.getElementById('wiz-dots').children;
+  for(let i=0;i<4;i++) {
+    dots[i].className = 'wdot' + (i<step-1?' done':i===step-1?' curr':'');
+  }
+}
+
+function updateFooter() {
+  const back = document.getElementById('wiz-back');
+  const next = document.getElementById('wiz-next');
+  back.style.visibility = step > 1 ? 'visible' : 'hidden';
+  const titles = ['','Select Subject','Choose Topic','Select Grade','Optional Focus'];
+  document.getElementById('wiz-htitle').textContent = titles[step];
+  if(step===4) {
+    next.textContent = '🧪 Generate'; next.disabled = false;
+  } else {
+    next.innerHTML = 'Next →'; next.disabled = !canGo();
+  }
+}
+
+function canGo() {
+  if(step===1) return selSubj!==null;
+  if(step===2) return selTopic!==null || (document.getElementById('topic-custom')?.value.trim().length>0);
+  if(step===3) return selGrade!==null;
+  return true;
+}
+
+function wizNext() {
+  if(step===4) { startGen(); return; }
+  if(!canGo()) return;
+  if(step===2 && !selTopic) selTopic = document.getElementById('topic-custom').value.trim();
+  showStep(step+1);
+}
+function wizBack() { if(step>1) showStep(step-1); }
+
+function pickSubj(s, el) {
+  document.querySelectorAll('.scard').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel'); selSubj=s; selTopic=null;
+  updateFooter();
+}
+
+function buildTopics() {
+  const wrap = document.getElementById('topic-chips');
+  wrap.innerHTML='';
+  document.getElementById('ws2-label').textContent = 'Step 2 of 4 — Choose a topic';
+  (TOPICS[selSubj]||[]).forEach(t => {
+    const s = document.createElement('span');
+    s.className = 'tchip '+selSubj; s.textContent=t;
+    s.onclick = () => {
+      document.querySelectorAll('.tchip').forEach(c=>c.classList.remove('sel'));
+      s.classList.add('sel'); selTopic=t;
+      document.getElementById('topic-custom').value='';
+      updateFooter();
+    };
+    wrap.appendChild(s);
+  });
+  const inp = document.getElementById('topic-custom');
+  inp.value='';
+  inp.oninput = e => {
+    document.querySelectorAll('.tchip').forEach(c=>c.classList.remove('sel'));
+    selTopic = e.target.value.trim()||null; updateFooter();
+  };
+  updateFooter();
+}
+
+function buildGrades() {
+  const w = document.getElementById('grade-wrap'); w.innerHTML='';
+  ['KG1','KG2','KG3','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6',
+   'Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'].forEach(g => {
+    const p = document.createElement('button');
+    p.className='gpill'; p.textContent=g;
+    p.onclick = () => {
+      document.querySelectorAll('.gpill').forEach(x=>x.classList.remove('sel'));
+      p.classList.add('sel'); selGrade=g; updateFooter();
+    };
+    w.appendChild(p);
+  });
+}
+
+function buildFocus() {
+  const w = document.getElementById('focus-chips'); w.innerHTML='';
+  document.getElementById('ws4-label').textContent = `Step 4 of 4 — Focus for "${selTopic}" (optional)`;
+  (FOCUS[selSubj]||[]).forEach(f => {
+    const s = document.createElement('span');
+    s.className='fchip'; s.textContent=f;
+    s.onclick = () => {
+      s.classList.toggle('sel');
+      selFocus = s.classList.contains('sel') ? f : null;
+    };
+    w.appendChild(s);
+  });
+  const skip = document.createElement('span');
+  skip.className='fchip skip-chip'; skip.textContent='↩ Skip — generate complete simulation';
+  skip.onclick = () => { selFocus=null; startGen(); };
+  w.appendChild(skip);
+  document.getElementById('focus-custom').value='';
+  document.getElementById('focus-custom').oninput = e => { selFocus = e.target.value.trim()||null; };
+}
+
+function startGen() {
+  closeWiz();
+  document.getElementById('viewer').style.display='none';
+  const gv = document.getElementById('gen-view');
+  gv.style.display='flex'; gv.style.flex='1';
+  document.getElementById('gen-label').textContent = `Building: ${selTopic} for ${selGrade}…`;
+  document.getElementById('gen-sub').textContent = `Subject: ${selSubj} · ${selFocus?'Focus: '+selFocus:'Full comprehensive simulation'}`;
+
+  setTimeout(() => {
+    gv.style.display='none';
+    document.getElementById('viewer').style.display='flex';
+    updateViewer(selTopic+' — Virtual Laboratory', selGrade, selSubj, false);
+
+    // Add to My Simulations
+    const list = document.getElementById('my-list');
+    const empty = list.querySelector('div[style]');
+    if(empty) empty.remove();
+
+    const card = document.createElement('div');
+    card.className='lib-card sel';
+    const c = COLORS[selSubj]||COLORS.phys;
+    card.innerHTML = `
+      <div class="lib-thumb" style="background:${c.dim};">${ICONS[selSubj]||'🔬'}</div>
+      <div class="lib-info">
+        <div class="lib-name">${selTopic}</div>
+        <div class="lib-meta">${selGrade} · Just now</div>
+      </div>
+      <span class="lib-badge" style="background:${c.dim};color:${c.main};border-color:${c.border};">
+        ${selSubj.charAt(0).toUpperCase()+selSubj.slice(1)}
+      </span>`;
+    card.onclick = () => {
+      document.querySelectorAll('.lib-card').forEach(x=>x.classList.remove('sel'));
+      card.classList.add('sel');
+      updateViewer(selTopic+' — Virtual Laboratory', selGrade, selSubj, false);
+    };
+    document.querySelectorAll('.lib-card').forEach(x=>x.classList.remove('sel'));
+    list.prepend(card);
+    showToast('✓ ' + selTopic + ' is ready!');
+  }, 3600);
+}
+
+// ── Present mode ──────────────────────────────────────────────────────────────
+function openPresent() { document.getElementById('present').classList.add('open'); }
+function closePresent() { document.getElementById('present').classList.remove('open'); }
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(8px)';},2400);
+}
+
+// ── Keys ──────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') { closeWiz(); closePresent(); }
+  if(e.key==='Enter' && document.getElementById('wiz-overlay').classList.contains('open')) wizNext();
+});
+</script>
+</body>
+</html>

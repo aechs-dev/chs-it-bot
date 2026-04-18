@@ -4,501 +4,427 @@
 // knowledge-loader.js — CHS.ai Knowledge Base Loader
 // AECHS 2025-2026
 //
+// Reads from: people, roles, presence, schedules, person_departments, access
+// No legacy contacts/schedules tables.
+//
 // CLEARANCE RULES:
-//
-// 'teacher'
-//   - Staff directory: name, role, dept, subjects only (NO phones)
-//   - Subject→teacher reference: YES
-//   - Other teachers' schedules: NO — redirect to Mrs. Lara (Secretary)
-//   - WiFi: AECHS_UNIFI only (all_staff networks)
-//   - ESkool: YES
-//   - Devices: NO | Passwords: NO
-//
-// 'coordinator'
-//   - Staff directory: no phones
-//   - Schedules: their subject's periods only
-//   - WiFi: AECHS_UNIFI only (all_staff)
-//   - ESkool: YES | Devices: NO | Passwords: NO
-//
-// 'hod'
-//   - Staff directory: no phones
-//   - Schedules: their department's teachers only
-//   - WiFi: AECHS_UNIFI only (all_staff)
-//   - ESkool: YES | Devices: NO | Passwords: NO
-//
-// 'office'
-//   - Staff directory: FULL including phones
-//   - Schedules: ALL teachers, full period-by-period
-//   - WiFi: all_staff + office networks
-//   - ESkool: YES | Devices: YES | Passwords: NO
-//
-// 'owner'  (Mr. Yeghia)
-//   - EVERYTHING + named networks where allowed + credentials
-//
-// WiFi per-network access:
-//   access_level = "all_staff"  → teacher / coordinator / hod / office / owner
-//   access_level = "office"     → office / owner
-//   access_level = "named"      → only if profile.name appears in allowed_users, or owner
+//   owner           — everything
+//   office          — full directory + phones + all schedules + office wifi
+//   hod             — their dept schedules, no phones
+//   coordinator     — their subject schedules, no phones
+//   teacher         — own schedule only, no other schedules, no phones
+//   student         — study help only, no staff data
 // ─────────────────────────────────────────────────────────────────────────────
 
-const path = require('path');
-const fs   = require('fs');
-const xlsx = require('xlsx');
+const db = require('./database');
 
-const KNOWLEDGE_DIR = path.join(__dirname, '..', 'knowledge');
-
-// ── Read xlsx safely ──────────────────────────────────────────────────────────
-function readXlsx(filename) {
-  const filePath = path.join(KNOWLEDGE_DIR, filename);
-  if (!fs.existsSync(filePath)) return [];
-  try {
-    const wb = xlsx.readFile(filePath);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    return xlsx.utils.sheet_to_json(ws, { defval: '' });
-  } catch (e) {
-    console.error(`[knowledge-loader] Failed to read ${filename}:`, e.message);
-    return [];
-  }
+function displayClassLabel(label = '', profile = null) {
+  const clean = String(label || '').trim().replace(/\bAp\b/g, 'AP').replace(/\bAmerican Program\b/gi, 'AP');
+  if (!clean) return clean;
+  const isAp = !!profile?.american_program || /\bap\b|american program/i.test(clean);
+  if (!isAp) return clean;
+  if (/\bap\b/i.test(clean)) return clean;
+  if (!/\b(?:grade|gr)\s*(1[0-2]|[1-9])\b/i.test(clean)) return clean;
+  return `AP ${clean}`;
 }
 
-// ── Rows → compact plain text ─────────────────────────────────────────────────
-function rowsToText(rows) {
-  if (!rows.length) return '';
-  const keys = Object.keys(rows[0]);
-  return rows
-    .filter(r => Object.values(r).some(v => v))
-    .map(r => keys.map(k => r[k] || '').filter(Boolean).join(' | '))
-    .filter(Boolean)
-    .join('\n');
+const CLEARANCE_RANK = ['student','teacher','coordinator','hod','office','owner'];
+function rankOf(c) { return CLEARANCE_RANK.indexOf(c ?? 'teacher'); }
+
+// ── Get all active staff with role/presence ───────────────────────────────────
+function getStaff() {
+  return db.prepare(`
+    SELECT
+      p.id, p.full_name, p.title, p.first_name, p.last_name, p.phone, p.american_program,
+      r.role_type, r.substitution_eligible,
+      pr.employment_type, pr.days AS presence_days, pr.arrival_time, pr.departure_time
+    FROM people p
+    LEFT JOIN roles r     ON r.person_id = p.id
+    LEFT JOIN presence pr ON pr.person_id = p.id
+    WHERE p.status = 'active'
+    ORDER BY p.last_name ASC, p.first_name ASC
+  `).all();
 }
 
-// ── Department fragments for HoD filtering ───────────────────────────────────
-const HOD_DEPT_MAP = {
-  'kg':           ['KG', 'Kindergarten'],
-  'elementary':   ['Elementary'],
-  'specialed':    ['Special Ed', 'Special Education'],
-  'intermediate': ['Intermediate'],
-  'secondary':    ['Secondary'],
-  'american':     ['American Program', 'American Department'],
-};
-
-// ── Subject fragments for Coordinator filtering ──────────────────────────────
-const COORDINATOR_SUBJECT_MAP = {
-  'math':          ['Math'],
-  'english':       ['English'],
-  'arabic':        ['Arabic'],
-  'armenian':      ['Armenian'],
-  'biology':       ['Biology'],
-  'physics':       ['Physics'],
-  'chemistry':     ['Chemistry'],
-  'socialstudies': ['Social Studies', 'Geography', 'Civics', 'History'],
-};
-
-// ── Detect clearance from profile ────────────────────────────────────────────
-// Staff explicitly granted office-level whereabouts access by name
-// Regardless of how their role is stored in the profile
-const WHEREABOUTS_ACCESS = [
-  'lara karghayan',
-  'maral deyirmenjian',
-  'taline messerlian',
-  'yeghia boghossian',
-];
-
-function detectClearance(profile) {
-  if (!profile || !profile.role) {
-    // Even without a role, check by name for whereabouts access
-    const pname = ((profile && profile.name) || '').toLowerCase();
-    if (WHEREABOUTS_ACCESS.some(n => pname.includes(n) || n.includes(pname.split(' ').pop()))) return 'office';
-    return 'teacher';
-  }
-
-  const r    = (profile.role + ' ' + (profile.department || '')).toLowerCase();
-  const name = ((profile.name) || '').toLowerCase();
-
-  // Named whereabouts access — always office regardless of role string
-  if (WHEREABOUTS_ACCESS.some(n => name.includes(n) || n.includes(name.split(' ').pop()))) return 'office';
-
-  if (r.includes('principal')          || r.includes('academic director') ||
-      r.includes('secretary')           || r.includes('disciplinarian')   ||
-      r.includes('accountant')          || r.includes('government relation') ||
-      r.includes('bookstore')           || r.includes('it manager')) return 'office';
-
-  if (r.includes('head of department') || r.includes('hod') ||
-      r.includes('head of dept')        || r.includes('department head')) return 'hod';
-
-  if (r.includes('coordinator')) return 'coordinator';
-
-  // #40: Student tier — lowest clearance
-  if (r.includes('student')) return 'student';
-
-  return 'teacher';
+function getPersonDepts(person_id) {
+  return db.prepare(`
+    SELECT d.name FROM person_departments pd
+    JOIN departments d ON d.id = pd.dept_id
+    WHERE pd.person_id = ?
+    ORDER BY pd.is_primary DESC
+  `).all(person_id).map(r => r.name);
 }
 
-function detectHodDept(profile) {
-  const r = ((profile.role || '') + ' ' + (profile.department || '')).toLowerCase();
-  for (const [key, frags] of Object.entries(HOD_DEPT_MAP)) {
-    if (frags.some(f => r.includes(f.toLowerCase()))) return key;
-  }
-  return null;
+function getSchedules() {
+  return db.prepare(`
+    SELECT p.full_name AS teacher, s.day, s.period, s.class_name
+    FROM schedules s
+    JOIN people p ON p.id = s.person_id
+    WHERE s.academic_year = '2025-2026'
+    ORDER BY p.last_name ASC,
+      CASE s.day WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2
+                 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4
+                 WHEN 'Friday' THEN 5 END,
+      CAST(s.period AS INTEGER) ASC
+  `).all();
 }
 
-function detectCoordSubject(profile) {
-  const r = ((profile.role || '') + ' ' + (profile.department || '')).toLowerCase();
-  for (const [key, frags] of Object.entries(COORDINATOR_SUBJECT_MAP)) {
-    if (frags.some(f => r.includes(f.toLowerCase()))) return key;
-  }
-  return null;
+function getWifi() {
+  try { return db.prepare('SELECT * FROM wifi').all(); } catch (_) { return []; }
 }
 
-function deptMatches(deptStr, hodDeptKey) {
-  if (!hodDeptKey || !deptStr) return false;
-  return (HOD_DEPT_MAP[hodDeptKey] || []).some(f => deptStr.toLowerCase().includes(f.toLowerCase()));
+function getCalendar() {
+  try { return db.prepare('SELECT * FROM calendar ORDER BY date ASC').all(); } catch (_) { return []; }
 }
 
-function subjectMatches(subjectStr, coordSubjectKey) {
-  if (!coordSubjectKey || !subjectStr) return false;
-  return (COORDINATOR_SUBJECT_MAP[coordSubjectKey] || []).some(f => subjectStr.toLowerCase().includes(f.toLowerCase()));
+// ── Role → display label ──────────────────────────────────────────────────────
+function roleLabel(role_type) {
+  const map = {
+    teacher:              'Teacher',
+    coordinator:          'Coordinator',
+    hod_kg:               'Head of KG Dept',
+    hod_elementary:       'Head of Elementary Dept',
+    hod_intermediate:     'Head of Intermediate Dept',
+    hod_secondary:        'Head of Secondary Dept',
+    librarian:            'Librarian',
+    nurse:                'Nurse',
+    bookstore:            'Bookstore',
+    secretary:            'Secretary',
+    accountant:           'Accountant',
+    academic_director:    'Academic Director',
+    principal:            'Principal',
+    it_manager:           'IT Manager',
+    psychologist:         'Psychologist',
+    counselor:            'Counselor',
+    disciplinarian:       'Disciplinarian',
+    government_relations: 'Government Relations',
+  };
+  return map[role_type] || role_type || 'Staff';
 }
 
 // ── WiFi access check ─────────────────────────────────────────────────────────
-// Returns true if this user/clearance combo can see a given WiFi network row
 function canSeeWifi(wifiRow, clearanceLevel, profile) {
-  const level       = (wifiRow['Access Level'] || '').trim().toLowerCase();
-  const allowedRaw  = wifiRow['Allowed Users'] || '';
-  const isOwner     = clearanceLevel === 'owner';
-  const isOffice    = clearanceLevel === 'office' || isOwner;
-  const userName    = ((profile && profile.name) || '').toLowerCase().trim();
-  const userRole    = ((profile && profile.role) || '').toLowerCase().trim();
-
-  if (level === 'all_staff') return true;  // every registered staff member
-
+  const level   = (wifiRow.access_level || '').toLowerCase();
+  const isOwner = clearanceLevel === 'owner';
+  const isOffice = clearanceLevel === 'office' || isOwner;
+  if (level === 'all_staff') return true;
   if (level === 'office') return isOffice;
-
   if (level === 'named') {
     if (isOwner) return true;
-    // Check if the user's name or role appears in the pipe-separated allowed list
-    const allowed = allowedRaw.split('|').map(s => s.trim().toLowerCase());
-    // Match by name fragment or role fragment
-    return allowed.some(a =>
-      (userName && (userName.includes(a) || a.includes(userName.split(' ').pop()))) ||
-      (userRole  && a.includes(userRole))
-    );
+    const allowed = (wifiRow.allowed_users || '').split('|').map(s => s.trim().toLowerCase());
+    const name = (profile?.full_name || '').toLowerCase();
+    return allowed.some(a => name.includes(a) || a.includes(name.split(' ').pop()));
   }
+  return false;
+}
 
-  return false;  // unknown level — deny by default
+// ── Detect HoD department key from role_type ──────────────────────────────────
+const HOD_DEPT_MAP = {
+  'hod_kg':           ['KG'],
+  'hod_elementary':   ['Elementary'],
+  'hod_intermediate': ['Intermediate'],
+  'hod_secondary':    ['Secondary'],
+};
+
+function getHodDepts(role_type) {
+  return HOD_DEPT_MAP[role_type] || [];
+}
+
+// ── Detect coordinator subject from role ──────────────────────────────────────
+const COORD_SUBJECT_KEYWORDS = {
+  'Math':         ['math'],
+  'English':      ['english'],
+  'Arabic':       ['arabic'],
+  'Armenian':     ['armenian'],
+  'Biology':      ['biology'],
+  'Physics':      ['physics'],
+  'Chemistry':    ['chemistry'],
+  'Social':       ['social', 'civics', 'geography', 'history'],
+};
+
+function getCoordSubjectFilter(profile) {
+  if (!profile?.role_type) return null;
+  const r = profile.role_type.toLowerCase();
+  for (const [subject, keywords] of Object.entries(COORD_SUBJECT_KEYWORDS)) {
+    if (keywords.some(k => r.includes(k))) return subject;
+  }
+  // Try full_name based detection (coordinators often have subject in role label)
+  return null;
+}
+
+// ── Build personal context block ──────────────────────────────────────────────
+function buildPersonalContext(clearanceLevel, profile) {
+  if (!profile) return '';
+  let ctx = '\n\n## YOUR IDENTITY\n';
+  ctx += `Name: ${profile.full_name || profile.name || 'Unknown'}\n`;
+  if (profile.role_type) ctx += `Role: ${roleLabel(profile.role_type)}\n`;
+  if (profile.clearance) ctx += `Clearance: ${profile.clearance}\n`;
+  if (profile.american_program) ctx += 'Program Track: American Program (AP)\n';
+  if (profile.departments?.length) ctx += `Departments: ${profile.departments.map(d => d.name || d).join(', ')}\n`;
+  return ctx;
+}
+
+// ── Build own schedule block ──────────────────────────────────────────────────
+function buildOwnSchedule(profile) {
+  if (!profile?.person_id) return '';
+  const rows = db.prepare(`
+    SELECT day, period, class_name FROM schedules
+    WHERE person_id = ? AND academic_year = '2025-2026'
+    ORDER BY CASE day WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2
+                      WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4
+                      WHEN 'Friday' THEN 5 END,
+             CAST(period AS INTEGER) ASC
+  `).all(profile.person_id);
+
+  if (!rows.length) return '\n## YOUR SCHEDULE\nNo classes scheduled.\n';
+
+  let out = '\n## YOUR SCHEDULE\n';
+  const byDay = {};
+  for (const r of rows) {
+    if (!byDay[r.day]) byDay[r.day] = [];
+    byDay[r.day].push(`P${r.period}: ${displayClassLabel(r.class_name, profile)}`);
+  }
+  for (const [day, classes] of Object.entries(byDay)) {
+    out += `${day}: ${classes.join(' | ')}\n`;
+  }
+  return out;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// loadKnowledge(clearanceLevel, profile)
+// loadKnowledgeForQuery — query-aware loader (web chat)
+// Only loads what's relevant to the current query intent.
 // ─────────────────────────────────────────────────────────────────────────────
-function loadKnowledge(clearanceLevel, profile) {
+function loadKnowledgeForQuery(clearanceLevel, profile, recentMessages) {
+  const msg = (recentMessages || '').toLowerCase();
 
-  if (!clearanceLevel || clearanceLevel === 'auto') {
-    clearanceLevel = detectClearance(profile);
-  }
+  const intent = {
+    schedule:    /schedule|class|period|teach|free|when|today|monday|tuesday|wednesday|thursday|friday/i.test(msg),
+    directory:   /who is|staff|teacher|contact|phone|name|role|dept/i.test(msg),
+    whereabouts: /where is|where's|which period|is .+ in|absent|substitute/i.test(msg),
+    wifi:        /wifi|wi-fi|password|internet|network|connect/i.test(msg),
+    calendar:    /holiday|vacation|school|calendar|event|break/i.test(msg),
+    document:    /test|exam|quiz|lesson plan|document|generate|create|make/i.test(msg),
+  };
 
-  const isOwner       = clearanceLevel === 'owner';
-  const isOffice      = clearanceLevel === 'office' || isOwner;
-  const isHod         = clearanceLevel === 'hod';
-  const isCoordinator = clearanceLevel === 'coordinator';
-  const isTeacher     = clearanceLevel === 'teacher';
-  const isStudent     = clearanceLevel === 'student';
+  const isOwner  = clearanceLevel === 'owner';
+  const isOffice = rankOf(clearanceLevel) >= rankOf('office');
+  const isHod    = clearanceLevel === 'hod';
+  const isCoord  = clearanceLevel === 'coordinator';
 
-  const hodDept      = (isHod && profile)         ? detectHodDept(profile)      : null;
-  const coordSubject = (isCoordinator && profile)  ? detectCoordSubject(profile) : null;
+  let out = buildPersonalContext(clearanceLevel, profile);
+  out += buildOwnSchedule(profile);
 
-  // ── PHASE 2: Personalized context block ────────────────────────────────────
-  // Builds a user-specific preamble from profile fields before the KB data
-  let personalCtx = '';
-  if (profile && profile.name) {
-    const pName    = ((profile.title || '') + ' ' + profile.name).trim();
-    const pRole    = profile.role       || '';
-    const pDept    = profile.department || profile.division || '';
-    const pSubject = profile.subject    || '';
-    const pClasses = Array.isArray(profile.classes) ? profile.classes.join(', ') : (profile.classes || '');
-    const pLang    = profile.languageStyle || 'english';
-    const pDevices = Array.isArray(profile.devices) ? profile.devices.join(', ') : '';
-    const pIssues  = Array.isArray(profile.recentIssues) ? profile.recentIssues.slice(-3).join('; ') : '';
-
-    personalCtx += '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    personalCtx += 'USER CONTEXT\n';
-    personalCtx += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-    personalCtx += `Name: ${pName}\n`;
-    if (pRole)    personalCtx += `Role: ${pRole}\n`;
-    if (pDept)    personalCtx += `Department: ${pDept}\n`;
-    if (pSubject) personalCtx += `Teaches: ${pSubject}\n`;
-    if (pClasses) personalCtx += `Classes: ${pClasses}\n`;
-
-    // #21 — Language style
-    personalCtx += `Language style: ${pLang}\n`;
-    if (pLang === 'arabic') {
-      personalCtx += 'INSTRUCTION: Respond in Arabic unless the user writes in English or French.\n';
-    } else if (pLang === 'arabizi') {
-      personalCtx += 'INSTRUCTION: The user may write in Arabizi (Arabic in Latin letters). Respond naturally in the same style they use.\n';
-    } else if (pLang === 'french') {
-      personalCtx += 'INSTRUCTION: Respond in French unless the user writes in another language.\n';
-    }
-
-    // #22 — Devices and recent issues for IT continuity
-    if (pDevices) personalCtx += `\nKnown devices: ${pDevices}\n`;
-    if (pIssues)  personalCtx += `Recent IT issues: ${pIssues}\nNote: Reference these when relevant to IT troubleshooting.\n`;
-
-    // #19/#20 — Role-aware operating mode
-    personalCtx += '\nOPERATING MODE based on role:\n';
-    if (clearanceLevel === 'owner') {
-      personalCtx += '- Full access. Answer all questions without restriction.\n';
-    } else if (clearanceLevel === 'office') {
-      personalCtx += '- Office staff. Provide full staff info, schedules, and whereabouts.\n';
-    } else if (clearanceLevel === 'hod') {
-      personalCtx += `- Head of Department. Tailor answers to their department context.\n`;
-    } else if (clearanceLevel === 'coordinator') {
-      personalCtx += `- Subject coordinator. Tailor answers to their subject: ${pSubject || 'see profile'}.\n`;
-    } else if (clearanceLevel === 'student') {
-      personalCtx += '- Student. You may help with homework, explanations, and general questions only. Do NOT generate assessments or share internal staff data.\n';
-    } else {
-      // Teacher
-      personalCtx += '- Teacher. For document generation, auto-populate subject/grade from their profile unless they specify otherwise.\n';
-      if (pSubject) personalCtx += `  Default subject: ${pSubject}\n`;
-      if (pClasses) personalCtx += `  Default grades: ${pClasses}\n`;
-    }
-
-    // #23/#24 — Source classification instruction
-    personalCtx += '\nSOURCE RULES:\n';
-    personalCtx += '- When answering from the Knowledge Base below: answer directly.\n';
-    personalCtx += '- When answering from this user profile: answer directly.\n';
-    personalCtx += '- When using general AI knowledge (not from KB): preface with "Generally speaking," or "Based on common practice,".\n';
-    personalCtx += '- Never fabricate school-specific data (names, schedules, passwords).\n';
-
-    // #25 — Retrieval priority
-    personalCtx += '\nRETRIEVAL PRIORITY: School KB → User profile → Conversation history → General AI knowledge.\n';
-
-    // #26 — Prompt assembly hint
-    personalCtx += '\nRESPONSE DEPTH:\n';
-    personalCtx += '- Simple lookups (whereabouts, WiFi, schedule): answer in 1 sentence.\n';
-    personalCtx += '- IT troubleshooting: step-by-step, concise.\n';
-    personalCtx += '- Document generation: follow doc spec format exactly.\n';
-    personalCtx += '- General questions: 2-4 sentences max unless detail is explicitly requested.\n';
-  }
-
-  // ── #40: Student tier — very restricted KB ──────────────────────────────
-  if (isStudent) {
-    let studentOut = '\n\nYou are assisting a student. Restrictions:\n';
-    studentOut += '- Do NOT share staff phone numbers, schedules, WiFi passwords, or internal school data.\n';
-    studentOut += '- Do NOT generate tests, exams, or answer keys.\n';
-    studentOut += '- You may help with: homework questions, subject explanations, translations, general school info.\n';
-    studentOut += '- Academic calendar and general school info only.\n';
-    const cal = readXlsx('academic_calendar.xlsx');
-    if (cal.length) {
-      studentOut += '\n## ACADEMIC CALENDAR 2025-2026\n';
-      for (const r of cal) {
-        if (!r['Date'] || !r['Event / Note']) continue;
-        studentOut += `${r['Date']} | ${r['Event / Note']} | ${r['School Day?'] || ''}\n`;
-      }
-    }
-    return studentOut;
-  }
-
-  let out = '\n\n─────────────────────────────────────\nSCHOOL KNOWLEDGE BASE — AECHS 2025-2026\n─────────────────────────────────────\n';
-  out = personalCtx + out;
-  out += '\nSCHOOL PERIOD STRUCTURE:\n';
-  out += 'Period 1: 08:00–08:45 | Period 2: 08:45–09:30 | Period 3: 09:30–10:15\n';
-  out += 'RECESS: 10:15–10:40\n';
-  out += 'Period 4: 10:40–11:25 | Period 5: 11:25–12:10\n';
-  out += 'RECESS: 12:10–12:30\n';
-  out += 'Period 6: 12:30–13:15 | Period 7: 13:15–14:00\n';
-  out += 'Early slots (dept meetings): 07:15–08:00 and 07:30–08:00\n';
-  out += '\nIMPORTANT RULES FOR AVAILABILITY & WHEREABOUTS QUESTIONS:\n';
-  out += '- Part-time teachers are NOT present every day. An empty slot does NOT mean free — they may not be in school.\n';
-  out += '- Always check Employment Type and Presence Notes before answering.\n';
-  out += '- If a teacher is part-time and not scheduled today, say they are not on campus today.\n';
-  out += '- If unsure, suggest contacting Mrs. Lara Karghayan (Secretary).\n';
-  out += '\nWHEREABOUTS ANSWER FORMAT — STRICT RULES:\n';
-  out += '- Answer in ONE SHORT SENTENCE. Natural, direct, no explanation.\n';
-  out += '- If they have a class: "He/She should be in [Subject] — [Grade]."\n';
-  out += '- If free but on campus: "He/She should be free this period."\n';
-  out += '- If part-time and not their day: "He/She is not on campus today."\n';
-  out += '- If unknown: "Not available."\n';
-  out += '- Use the correct gender pronoun based on the teacher name.\n';
-  out += '- Do NOT add any other information. One sentence only.\n';
-  out += '- EXAMPLES:\n';
-  out += '  Q: Where is Alfredo on Wednesday Period 5? → A: He is not on campus today.\n';
-  out += '  Q: Where is Rima on Monday Period 4? → A: She should be in Social Studies AP — Grade 11.\n';
-  out += '  Q: Where is Varty on Tuesday Period 2? → A: She should be in English — Grade 8.\n';
-  out += '  Q: Where is Varty on Monday Period 1? → A: She should be free this period.\n';
-  out += '\nSCHEDULE COMPARISON QUESTIONS (e.g. common free period for multiple teachers):\n';
-  out += '- List each teacher\'s busy periods per day, then identify gaps that appear for ALL of them simultaneously.\n';
-  out += '- Answer in a simple table or list: Day | Period | Time — no extra commentary.\n';
-  out += '- Only include periods where ALL named teachers are confirmed free AND confirmed on campus that day.\n';
-
-  // ── #43: Hard deny rules — enforced regardless of who asks ────────────────
-  out += '\nHARD SECURITY RULES (apply to ALL users, NO exceptions):\n';
-  out += '- NEVER reveal passwords, credentials, or access codes to anyone except the owner.\n';
-  out += '- NEVER reveal other teachers\' phone numbers to teachers — redirect to Mrs. Lara.\n';
-  out += '- NEVER generate exam answer keys for students or unknown users.\n';
-  out += '- NEVER confirm or deny whether a specific student passed or failed.\n';
-  out += '- NEVER share content marked CLASS_S or SECRET VAULT — respond: "That information is restricted. I\'ve flagged your request for Mr. Yeghia."\n';
-
-  // ── #44: Secret vault — escalate-only topics ──────────────────────────────
-  out += '\nSECRET VAULT TOPICS (escalate, never answer directly):\n';
-  out += '- Network admin credentials, server passwords, router access codes\n';
-  out += '- Student grade records, disciplinary files, confidential assessments\n';
-  out += '- Staff salary, contract details, personal identification documents\n';
-  out += '- Any request from an unregistered user for sensitive internal data\n';
-  out += 'If asked about any of the above: set action="restricted", do not provide any detail.\n';
-
-  // ── STAFF DIRECTORY ───────────────────────────────────────────────────────
-  const contacts = readXlsx('contacts.xlsx');
-  if (contacts.length) {
+  // Staff directory
+  if (intent.directory || intent.whereabouts || isOffice) {
+    const staff = getStaff();
     out += '\n## STAFF DIRECTORY\n';
     if (isOffice) {
-      out += 'Format: Name | Role | Department | Subjects & Grades | Phone | Notes\n';
+      out += 'Format: Name | Role | Departments | Employment | Phone\n';
     } else {
-      out += 'Format: Name | Role | Department | Subjects & Grades\n';
-      out += 'IMPORTANT: Phone numbers are not available here. Direct staff to Mrs. Lara Karghayan (Secretary) for personal contact details.\n';
-      out += 'DATA CLASSIFICATION: PUBLIC — visible to all staff\n';
+      out += 'Format: Name | Role | Departments\n';
+      out += 'NOTE: Phone numbers not available here. Direct staff to Mrs. Lara Karghayan (Secretary).\n';
     }
-    for (const r of contacts) {
-      if (!r['Name']) continue;
-      let line = `${r['Name']} | ${r['Role'] || ''} | ${r['Department'] || ''} | ${r['Classes / Subjects'] || ''}`;
-      if (r['Employment Type']) line += ` | ${r['Employment Type']}`;
-      if (r['Presence / Availability Notes']) line += ` | ${r['Presence / Availability Notes']}`;
-      if (isOffice) {
-        if (r['Phone Number']) line += ` | ${r['Phone Number']}`;
-        if (r['Handles'])      line += ` | ${r['Handles']}`;
-      }
-      out += line.trim() + '\n';
+    for (const s of staff) {
+      const depts = getPersonDepts(s.id);
+      let line = `${s.full_name} | ${roleLabel(s.role_type)} | ${depts.join(', ')}`;
+      if (s.employment_type !== 'full-time') line += ` | ${s.employment_type}`;
+      if (s.presence_days && s.employment_type === 'part-time') line += ` (${s.presence_days})`;
+      if (isOffice && s.phone) line += ` | ${s.phone}`;
+      out += line + '\n';
     }
   }
 
-  // ── SUBJECT → TEACHER REFERENCE ──────────────────────────────────────────
-  const subjects = readXlsx('subjects.xlsx');
-  if (subjects.length) {
-    out += '\n## WHO TEACHES WHAT\n';
-    out += 'Format: Subject | Grade | Teacher | Department\n';
-    for (const r of subjects) {
-      if (!r['Subject']) continue;
-      if (isCoordinator && coordSubject && !subjectMatches(r['Subject'], coordSubject)) continue;
-      if (isHod && hodDept && !deptMatches(r['Department'] || '', hodDept)) continue;
-      let line = `${r['Subject']} | ${r['Grade / Level'] || ''} | ${r['Teacher'] || ''} | ${r['Department'] || ''}`;
-      if (r['Notes']) line += ` | ${r['Notes']}`;
-      out += line.trim() + '\n';
-    }
-  }
-
-  // ── TEACHER SCHEDULES ─────────────────────────────────────────────────────
-  const schedules = readXlsx('staff_schedules.xlsx');
-  if (schedules.length) {
+  // Schedules
+  if (intent.schedule || intent.whereabouts) {
+    const schedules = getSchedules();
     if (isOffice) {
       out += '\n## TEACHER SCHEDULES (Full)\n';
-      out += 'Format: Teacher | Day | Period | Time | Class/Subject\n';
+      out += 'Format: Teacher | Day | Period | Class\n';
+      out += 'Period times: P1=08:00-08:45 P2=08:45-09:30 P3=09:30-10:15 P4=10:40-11:25 P5=11:25-12:10 P6=12:30-13:15 P7=13:15-14:00\n';
       for (const r of schedules) {
-        if (!r['Teacher'] || !r['Class / Subject']) continue;
-        out += `${r['Teacher']} | ${r['Day']} | ${r['Period'] || ''} | ${r['Time']} | ${r['Class / Subject']}${r['Notes'] ? ' | ' + r['Notes'] : ''}\n`;
+        out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
       }
-    } else if (isHod && hodDept) {
-      const deptTeachers = new Set(
-        contacts
-          .filter(r => r['Name'] && deptMatches(r['Department'] || '', hodDept))
-          .map(r => r['Name'].trim())
-      );
-      out += '\n## TEACHER SCHEDULES (Your Department)\n';
-      out += 'Format: Teacher | Day | Period | Time | Class/Subject\n';
-      let found = false;
-      for (const r of schedules) {
-        if (!r['Teacher'] || !r['Class / Subject']) continue;
-        if (!deptTeachers.has(r['Teacher'].trim())) continue;
-        out += `${r['Teacher']} | ${r['Day']} | ${r['Period'] || ''} | ${r['Time']} | ${r['Class / Subject']}\n`;
-        found = true;
+    } else if (isHod && profile?.role_type) {
+      const hodDepts = getHodDepts(profile.role_type);
+      if (hodDepts.length) {
+        // Get teachers in HoD's departments
+        const deptTeacherIds = db.prepare(`
+          SELECT DISTINCT pd.person_id FROM person_departments pd
+          JOIN departments d ON d.id = pd.dept_id
+          WHERE d.name IN (${hodDepts.map(() => '?').join(',')})
+        `).all(...hodDepts).map(r => r.person_id);
+
+        if (deptTeacherIds.length) {
+          const ph = deptTeacherIds.map(() => '?').join(',');
+          const deptSchedules = db.prepare(`
+            SELECT p.full_name AS teacher, s.day, s.period, s.class_name
+            FROM schedules s JOIN people p ON p.id = s.person_id
+            WHERE s.person_id IN (${ph}) AND s.academic_year = '2025-2026'
+            ORDER BY p.last_name, CASE s.day WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2
+              WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 END,
+              CAST(s.period AS INTEGER)
+          `).all(...deptTeacherIds);
+
+          out += `\n## TEACHER SCHEDULES (${hodDepts.join('/')} Dept)\n`;
+          for (const r of deptSchedules) {
+            out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
+          }
+        }
       }
-      if (!found) out += '(No schedule data found for your department.)\n';
-    } else if (isCoordinator && coordSubject) {
-      out += '\n## TEACHER SCHEDULES (Your Subject)\n';
-      out += 'Format: Teacher | Day | Period | Time | Class/Subject\n';
-      let found = false;
-      for (const r of schedules) {
-        if (!r['Teacher'] || !r['Class / Subject']) continue;
-        if (!subjectMatches(r['Class / Subject'], coordSubject)) continue;
-        out += `${r['Teacher']} | ${r['Day']} | ${r['Period'] || ''} | ${r['Time']} | ${r['Class / Subject']}\n`;
-        found = true;
+    } else if (isCoord) {
+      const subject = getCoordSubjectFilter(profile);
+      if (subject) {
+        const coordSchedules = schedules.filter(r => r.class_name.toLowerCase().includes(subject.toLowerCase()));
+        out += `\n## TEACHER SCHEDULES (${subject} classes)\n`;
+        for (const r of coordSchedules) {
+          out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
+        }
       }
-      if (!found) out += '(No schedule data found for your subject.)\n';
     } else {
-      // Teacher level — no schedule data for others
-      out += '\n## TEACHER SCHEDULES\n';
-      out += 'Schedule information for other staff is not available through CHS.ai.\n';
-      out += 'For schedule queries about colleagues, please contact Mrs. Lara Karghayan (Secretary).\n';
+      out += '\n## TEACHER SCHEDULES\nOther staff schedules: contact Mrs. Lara Karghayan (Secretary).\n';
     }
   }
 
-  // ── WIFI ──────────────────────────────────────────────────────────────────
-  const wifiRows = readXlsx('wifi.xlsx');
-  const visibleWifi = wifiRows.filter(r =>
-    r['Network Name (SSID)'] && canSeeWifi(r, clearanceLevel, profile)
-  );
-
-  if (visibleWifi.length) {
-    out += '\n## WIFI NETWORKS\n';
-    for (const r of visibleWifi) {
-      const ssid     = r['Network Name (SSID)']  || '';
-      const password = r['Password']              || '';
-      const notes    = r['Location / Notes']      || '';
-      const loginReq = (r['Login Required'] || '').toLowerCase() === 'yes';
-      const loginU   = r['Login Username']        || '';
-      const loginP   = r['Login Password']        || '';
-
-      out += `Network: ${ssid}\n`;
-      out += `  WiFi Password: ${password}\n`;
-      if (notes)    out += `  Notes: ${notes}\n`;
-      if (loginReq) {
-        out += `  Portal Login Required: Yes\n`;
-        out += `  Login Username: ${loginU}\n`;
-        out += `  Login Password: ${loginP}\n`;
+  // WiFi
+  if (intent.wifi) {
+    const wifiRows = getWifi();
+    const visible = wifiRows.filter(r => r.network_name && canSeeWifi(r, clearanceLevel, profile));
+    if (visible.length) {
+      out += '\n## WIFI NETWORKS\n';
+      for (const r of visible) {
+        out += `Network: ${r.network_name} | Password: ${r.password || 'none'}`;
+        if (r.notes) out += ` | ${r.notes}`;
+        out += '\n';
       }
+    } else {
+      out += '\n## WIFI\nContact Mr. Yeghia Boghossian (IT Manager) for WiFi access.\n';
+    }
+  }
+
+  // Calendar
+  if (intent.calendar) {
+    const cal = getCalendar();
+    if (cal.length) {
+      out += '\n## ACADEMIC CALENDAR 2025-2026\n';
+      for (const r of cal) {
+        out += `${r.date} | ${r.title} | ${r.type || ''}\n`;
+      }
+    }
+  }
+
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// loadKnowledge — full loader for WhatsApp handler
+// ─────────────────────────────────────────────────────────────────────────────
+function loadKnowledge(clearanceLevel, profile) {
+  const isOwner  = clearanceLevel === 'owner';
+  const isOffice = rankOf(clearanceLevel) >= rankOf('office');
+  const isHod    = clearanceLevel === 'hod';
+  const isCoord  = clearanceLevel === 'coordinator';
+  const isStudent = clearanceLevel === 'student';
+
+  if (isStudent) {
+    let out = '\n\nYou are assisting a student.\n';
+    out += '- Do NOT share staff phone numbers, schedules, WiFi passwords, or internal school data.\n';
+    out += '- Do NOT generate tests, exams, or answer keys.\n';
+    out += '- You may help with: homework, subject explanations, translations, general school info.\n';
+    const cal = getCalendar();
+    if (cal.length) {
+      out += '\n## ACADEMIC CALENDAR 2025-2026\n';
+      for (const r of cal) out += `${r.date} | ${r.title}\n`;
+    }
+    return out;
+  }
+
+  let out = buildPersonalContext(clearanceLevel, profile);
+  out += buildOwnSchedule(profile);
+
+  // Staff directory
+  const staff = getStaff();
+  out += '\n## STAFF DIRECTORY\n';
+  if (isOffice) {
+    out += 'Format: Name | Role | Departments | Employment | Phone\n';
+  } else {
+    out += 'Format: Name | Role | Departments\n';
+    out += 'NOTE: Phone numbers not available. Direct staff to Mrs. Lara Karghayan for contact details.\n';
+  }
+  for (const s of staff) {
+    const depts = getPersonDepts(s.id);
+    let line = `${s.full_name} | ${roleLabel(s.role_type)} | ${depts.join(', ')}`;
+    if (s.employment_type !== 'full-time') line += ` | ${s.employment_type}`;
+    if (s.presence_days && s.employment_type === 'part-time') line += ` (${s.presence_days})`;
+    if (isOffice && s.phone) line += ` | ${s.phone}`;
+    out += line + '\n';
+  }
+
+  // Schedules
+  const schedules = getSchedules();
+  if (isOffice) {
+    out += '\n## TEACHER SCHEDULES (Full)\n';
+    out += 'Period times: P1=08:00-08:45 P2=08:45-09:30 P3=09:30-10:15 P4=10:40-11:25 P5=11:25-12:10 P6=12:30-13:15 P7=13:15-14:00\n';
+    for (const r of schedules) {
+      out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
+    }
+  } else if (isHod && profile?.role_type) {
+    const hodDepts = getHodDepts(profile.role_type);
+    if (hodDepts.length) {
+      const deptTeacherIds = db.prepare(`
+        SELECT DISTINCT pd.person_id FROM person_departments pd
+        JOIN departments d ON d.id = pd.dept_id
+        WHERE d.name IN (${hodDepts.map(() => '?').join(',')})
+      `).all(...hodDepts).map(r => r.person_id);
+
+      if (deptTeacherIds.length) {
+        const ph = deptTeacherIds.map(() => '?').join(',');
+        const deptSchedules = db.prepare(`
+          SELECT p.full_name AS teacher, s.day, s.period, s.class_name
+          FROM schedules s JOIN people p ON p.id = s.person_id
+          WHERE s.person_id IN (${ph}) AND s.academic_year = '2025-2026'
+          ORDER BY p.last_name, CASE s.day WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2
+            WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 END,
+            CAST(s.period AS INTEGER)
+        `).all(...deptTeacherIds);
+        out += `\n## TEACHER SCHEDULES (${hodDepts.join('/')} Dept)\n`;
+        for (const r of deptSchedules) out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
+      }
+    }
+  } else if (isCoord) {
+    const subject = getCoordSubjectFilter(profile);
+    if (subject) {
+      const coordSchedules = schedules.filter(r => r.class_name.toLowerCase().includes(subject.toLowerCase()));
+      out += `\n## TEACHER SCHEDULES (${subject})\n`;
+      for (const r of coordSchedules) out += `${r.teacher} | ${r.day} | P${r.period} | ${r.class_name}\n`;
+    }
+  } else {
+    out += '\n## TEACHER SCHEDULES\nOther staff schedules: contact Mrs. Lara Karghayan (Secretary).\n';
+  }
+
+  // WiFi
+  const wifiRows = getWifi();
+  const visible = wifiRows.filter(r => r.network_name && canSeeWifi(r, clearanceLevel, profile));
+  if (visible.length) {
+    out += '\n## WIFI NETWORKS\n';
+    for (const r of visible) {
+      out += `Network: ${r.network_name} | Password: ${r.password || 'none'}`;
+      if (r.notes) out += ` | ${r.notes}`;
       out += '\n';
     }
-  } else if (isTeacher || isCoordinator || isHod) {
-    out += '\n## WIFI NETWORKS\n';
-    out += 'Contact Mr. Yeghia Boghossian (IT Manager) for WiFi access.\n';
+  } else {
+    out += '\n## WIFI\nContact Mr. Yeghia Boghossian (IT Manager) for WiFi access.\n';
   }
 
-  // ── ACADEMIC CALENDAR ──────────────────────────────────────────────────────
-  const calendar = readXlsx('academic_calendar.xlsx');
-  if (calendar.length) {
+  // Calendar
+  const cal = getCalendar();
+  if (cal.length) {
     out += '\n## ACADEMIC CALENDAR 2025-2026\n';
-    out += 'Term 1: Sep 18, 2025 – Jan 21, 2026 | MYE: Jan 23-30 | Term 2: Feb 2 – Jun 10, 2026 | FE: Jun 12-18\n';
-    out += 'Format: Date | Day | Event | Type | School Day\n';
-    for (const r of calendar) {
-      if (!r['Date'] || !r['Event / Note']) continue;
-      out += `${r['Date']} | ${r['Day'] || ''} | ${r['Event / Note']} | ${r['Type'] || ''} | ${r['School Day?'] || ''}\n`;
-    }
-  }
-
-  // ── ESKOOL ────────────────────────────────────────────────────────────────
-  const eskool = readXlsx('eskool.xlsx');
-  if (eskool.length) {
-    out += '\n## ESKOOL SYSTEM INFO\n';
-    // #41/#42: Filter out CLASS_S entries for non-owners
-    const eskoolFiltered = isOwner ? eskool : eskool.filter(r => (r['Classification'] || '').toUpperCase() !== 'CLASS_S');
-    out += rowsToText(eskoolFiltered) + '\n';
-  }
-
-  // ── DEVICES ───────────────────────────────────────────────────────────────
-  const devices = readXlsx('devices.xlsx');
-  if (devices.length && isOffice) {
-    out += '\n## SCHOOL DEVICES\n';
-    out += rowsToText(devices) + '\n';
+    for (const r of cal) out += `${r.date} | ${r.title} | ${r.type || ''}\n`;
   }
 
   return out;
 }
 
-// ── loadCredentials() — owner only ───────────────────────────────────────────
-function loadCredentials() {
-  const passwords = readXlsx('passwords.xlsx');
-  if (!passwords.length) return '';
-  let out = '\n\n## CREDENTIALS & PASSWORDS (Owner Only)\n';
-  out += rowsToText(passwords) + '\n';
-  return out;
-}
+function loadCredentials() { return ''; } // Credentials table not yet implemented
 
-module.exports = { loadKnowledge, loadCredentials };
+module.exports = { loadKnowledge, loadKnowledgeForQuery, loadCredentials };

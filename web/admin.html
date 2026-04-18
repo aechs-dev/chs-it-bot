@@ -3,925 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHS.ai — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<title>CHS.ai | Admin Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --green:      #2d5a27;
-    --green-mid:  #3a7232;
-    --green-lt:   #4a8c3f;
-    --green-bg:   #f2faf0;
-    --green-d:    #e2f2de;
-    --green-dd:   #c8e0c4;
-    --white:      #ffffff;
-    --text:       #1e3d1a;
-    --text-mid:   #4a6644;
-    --text-lt:    #7a9876;
-    --border:     #c8e0c4;
-    --shadow:     rgba(45,90,39,0.08);
-    --shadow-md:  rgba(45,90,39,0.15);
-    --red:        #b91c1c;
-    --red-bg:     #fef2f2;
-    --red-border: #fca5a5;
-    --orange:     #c2410c;
-    --orange-bg:  #fff7ed;
-    --blue:       #1d4ed8;
-    --blue-bg:    #eff6ff;
-    --purple:     #6d28d9;
-    --purple-bg:  #f5f3ff;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--green-bg); color: var(--text); min-height: 100vh; }
-
-  /* HEADER */
-  header {
-    background: var(--white); border-bottom: 1px solid var(--border);
-    padding: 0 36px; height: 64px;
-    display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 1px 6px var(--shadow); position: sticky; top: 0; z-index: 100;
-  }
-  .header-brand { display: flex; align-items: center; gap: 12px; }
-  .brand-name { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--green); }
-  .brand-div  { width: 1px; height: 18px; background: var(--border); }
-  .brand-sub  { font-size: 13px; color: var(--text-lt); }
-  .header-nav { display: flex; gap: 8px; }
-  .nav-btn {
-    padding: 7px 16px; font-size: 13px; color: var(--text-mid);
-    background: transparent; border: 1.5px solid var(--border); border-radius: 8px;
-    cursor: pointer; text-decoration: none; font-family: 'DM Sans', sans-serif;
-    transition: border-color .2s, color .2s, background .2s;
-  }
-  .nav-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-d); }
-
-  /* TOP TABS */
-  .top-nav { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 36px; display: flex; }
-  .top-tab {
-    padding: 15px 22px; font-size: 14px; font-weight: 400; color: var(--text-lt);
-    background: transparent; border: none; border-bottom: 2.5px solid transparent;
-    margin-bottom: -1px; cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: color .2s, border-color .2s; display: flex; align-items: center; gap: 8px;
-  }
-  .top-tab:hover { color: var(--text-mid); }
-  .top-tab.active { color: var(--green); border-bottom-color: var(--green); font-weight: 500; }
-
-  /* PANELS */
-  .panel { display: none; }
-  .panel.active { display: block; }
-  .panel-inner { max-width: 860px; margin: 0 auto; padding: 36px 24px; }
-  .panel-inner.wide { max-width: 1140px; }
-  .panel-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--green); margin-bottom: 4px; }
-  .panel-sub   { font-size: 14px; color: var(--text-lt); font-weight: 300; margin-bottom: 28px; }
-
-  /* CARDS */
-  .card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 26px 28px; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; }
-  .card-label { font-size: 11px; font-weight: 600; letter-spacing: .7px; text-transform: uppercase; color: var(--text-lt); margin-bottom: 16px; }
-
-  /* FORM */
-  .form-row { display: flex; gap: 12px; align-items: flex-end; }
-  .field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-mid); }
-  .field input, .field select, .field textarea {
-    padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
-    background: var(--green-bg); outline: none; width: 100%;
-    transition: border-color .2s, background .2s, box-shadow .2s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    border-color: var(--green-lt); background: var(--white);
-    box-shadow: 0 0 0 3px rgba(74,140,63,0.10);
-  }
-  .field input::placeholder, .field textarea::placeholder { color: var(--text-lt); }
-  .field textarea { resize: vertical; min-height: 72px; }
-
-  /* BUTTONS */
-  .btn { padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; border: none; border-radius: 9px; cursor: pointer; transition: background .2s, box-shadow .2s, transform .1s; white-space: nowrap; }
-  .btn:active { transform: scale(.98); }
-  .btn-green { background: var(--green); color: white; }
-  .btn-green:hover { background: var(--green-lt); box-shadow: 0 4px 12px var(--shadow-md); }
-  .btn-red { background: transparent; color: var(--red); border: 1.5px solid var(--red-border); padding: 6px 13px; font-size: 12.5px; }
-  .btn-red:hover { background: var(--red-bg); }
-  .btn-sm-green { background: var(--green-d); color: var(--green); border: 1.5px solid var(--green-dd); padding: 7px 14px; font-size: 13px; }
-  .btn-sm-green:hover { background: var(--green-dd); }
-
-  .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
-  .msg.ok  { color: var(--green); }
-  .msg.err { color: var(--red); }
-
-  /* USERS TABLE */
-  .tbl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .count-pill { font-size: 12px; color: var(--text-lt); background: var(--green-d); border: 1px solid var(--green-dd); border-radius: 20px; padding: 3px 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { border-bottom: 2px solid var(--border); }
-  th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-lt); }
-  tbody tr { border-bottom: 1px solid var(--green-d); transition: background .15s; }
-  tbody tr:hover { background: var(--green-bg); }
-  tbody tr:last-child { border-bottom: none; }
-  td { padding: 12px 14px; font-size: 14px; }
-  .code-tag { font-family: monospace; font-size: 13px; background: var(--green-d); color: var(--green); border: 1px solid var(--green-dd); border-radius: 6px; padding: 2px 10px; display: inline-block; }
-  .empty-row { text-align: center; padding: 36px; color: var(--text-lt); font-size: 14px; }
-
-  /* KNOWLEDGE SUB-TABS */
-  .sub-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--green-d); border: 1px solid var(--border); border-radius: 11px; padding: 4px; width: fit-content; flex-wrap: wrap; }
-  .sub-tab { padding: 8px 18px; font-size: 13px; color: var(--text-mid); background: transparent; border: none; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background .15s, color .15s; }
-  .sub-tab:hover { color: var(--green); }
-  .sub-tab.active { background: var(--white); color: var(--green); font-weight: 500; box-shadow: 0 1px 4px var(--shadow); }
-
-  /* KNOWLEDGE TABLE */
-  .k-section { background: var(--white); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; }
-  .k-section-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--green-bg); }
-  .k-section-title { font-size: 13px; font-weight: 600; color: var(--green); }
-  .k-table-wrap { overflow-x: auto; }
-  .k-table { width: 100%; border-collapse: collapse; }
-  .k-table th { background: var(--green-bg); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--text-lt); border-bottom: 1px solid var(--border); white-space: nowrap; }
-  .k-table td { padding: 0; border-bottom: 1px solid var(--green-d); vertical-align: top; }
-  .k-table tr:last-child td { border-bottom: none; }
-  .k-table tr:hover td { background: var(--green-bg); }
-  .k-table td input, .k-table td textarea { width: 100%; background: transparent; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13.5px; padding: 11px 14px; outline: none; resize: none; min-height: 42px; }
-  .k-table td input:focus, .k-table td textarea:focus { background: var(--green-d); box-shadow: inset 2px 0 0 var(--green); }
-  .k-actions { width: 70px; padding: 8px 10px !important; vertical-align: middle; }
-  .k-add-row { padding: 11px 16px; border-top: 1px dashed var(--border); display: flex; align-items: center; gap: 10px; background: var(--green-bg); }
-  .k-add-hint { font-size: 12.5px; color: var(--text-lt); }
-
-  /* Quick Add */
-  .quick-grid { display: grid; gap: 14px; }
-  .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-
-  /* Toast */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--white); border: 1.5px solid var(--green); color: var(--green); border-radius: 10px; padding: 13px 20px; font-size: 13.5px; font-weight: 500; z-index: 999; box-shadow: 0 8px 24px var(--shadow-md); transform: translateY(80px); opacity: 0; transition: all .3s cubic-bezier(.34,1.56,.64,1); }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.err  { border-color: var(--red); color: var(--red); }
-
-  /* Spinner */
-  .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; margin-right: 6px; vertical-align: middle; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-state { padding: 2rem; color: var(--text-lt); font-size: 13px; text-align: center; }
-
-  /* ── OVERVIEW CARDS (Phase 1 #15) ── */
-  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-  @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 500px) { .stat-grid { grid-template-columns: 1fr; } }
-  .stat-card {
-    background: var(--white); border: 1px solid var(--border); border-radius: 14px;
-    padding: 22px 24px; box-shadow: 0 2px 10px var(--shadow);
-    display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
-  }
-  .stat-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--accent, var(--green));
-  }
-  .stat-icon { margin-bottom: 4px; display:flex; align-items:center; }
-  .stat-value { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--text); line-height: 1; }
-  .stat-label { font-size: 12px; color: var(--text-lt); font-weight: 500; letter-spacing: .4px; }
-  .stat-card.green  { --accent: #2d5a27; }
-  .stat-card.orange { --accent: #c2410c; }
-  .stat-card.blue   { --accent: #1d4ed8; }
-  .stat-card.purple { --accent: #6d28d9; }
-
-  /* ── LIVE ACTIVITY (Phase 1 #16) ── */
-  .activity-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .live-dot { display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
-  .activity-list { display: flex; flex-direction: column; gap: 0; max-height: 420px; overflow-y: auto; }
-  .activity-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 11px 0; border-bottom: 1px solid var(--green-d); font-size: 13.5px;
-  }
-  .activity-item:last-child { border-bottom: none; }
-  .activity-dir {
-    flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center; font-size: 14px;
-  }
-  .activity-dir.in  { background: var(--blue-bg);   color: var(--blue); }
-  .activity-dir.out { background: var(--green-d);   color: var(--green); }
-  .activity-body { flex: 1; min-width: 0; }
-  .activity-who  { font-size: 11px; font-weight: 600; color: var(--text-lt); letter-spacing: .4px; margin-bottom: 2px; }
-  .activity-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .activity-time { flex-shrink: 0; font-size: 11px; color: var(--text-lt); margin-top: 4px; }
-  .activity-empty { padding: 40px; text-align: center; color: var(--text-lt); font-size: 14px; }
-  .refresh-btn { font-size: 12px; color: var(--text-lt); background: var(--green-d); border: 1px solid var(--green-dd); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background .2s; }
-  .refresh-btn:hover { background: var(--green-dd); color: var(--green); }
-
-  /* ── PROMPT SETTINGS (Phase 1 #17) ── */
-  .prompt-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-lt); margin-bottom: 20px; padding: 12px 16px; background: var(--green-bg); border: 1px solid var(--border); border-radius: 9px; }
-  .prompt-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
-  .prompt-textarea { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13.5px; color: var(--text); background: var(--green-bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 16px; min-height: 260px; outline: none; resize: vertical; line-height: 1.6; }
-  .prompt-textarea:focus { border-color: var(--green-lt); background: var(--white); box-shadow: 0 0 0 3px rgba(74,140,63,0.10); }
-  .prompt-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .prompt-note { font-size: 12px; color: var(--text-lt); margin-top: 10px; line-height: 1.5; }
-
-  /* ── DOCUMENT HISTORY (Phase 1 #18) ── */
-  .doc-history-grid { display: grid; gap: 10px; }
-  .doc-item {
-    background: var(--white); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px 20px; display: flex; align-items: center; gap: 16px;
-    transition: box-shadow .2s;
-  }
-  .doc-item:hover { box-shadow: 0 4px 14px var(--shadow-md); }
-  .doc-icon { flex-shrink: 0; width: 44px; height: 44px; background: var(--green-d); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-  .doc-info { flex: 1; min-width: 0; }
-  .doc-title { font-weight: 500; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta  { font-size: 12px; color: var(--text-lt); margin-top: 2px; }
-  .doc-dl    { flex-shrink: 0; }
-  .doc-empty { padding: 48px; text-align: center; color: var(--text-lt); }
-  .doc-empty-icon { margin-bottom: 10px; color: var(--text-lt); }
+:root{--bg:#e4f0e9;--panel:#f2fbf6;--ink:#151515;--muted:#665f54;--line:rgba(21,21,21,.1);--moss:#1B6358;--mossSoft:#dff2e7;--amber:#b56b28;--amberSoft:#f9ead7;--clay:#9b4832;--claySoft:#f8e2da;--sky:#355d7a;--skySoft:#ddeaf3;--shadow:0 24px 48px rgba(58,40,19,.14);--radius:24px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Instrument Sans',sans-serif;color:var(--ink);min-height:100vh;background:radial-gradient(circle at top left,rgba(27,99,88,.13),transparent 28%),radial-gradient(circle at top right,rgba(27,99,88,.14),transparent 28%),linear-gradient(180deg,#eaf4ef 0%,#deeae5 100%)}a{text-decoration:none;color:inherit}button,input,select,textarea{font:inherit}
+.shell{width:min(1440px,calc(100vw - 32px));margin:0 auto}.top{position:sticky;top:0;z-index:20;background:rgba(226,242,232,.9);backdrop-filter:blur(14px);border-bottom:1px solid rgba(21,21,21,.06)}.topIn{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;flex-wrap:wrap}.brand{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;letter-spacing:-.04em}.brand em{font-style:normal;color:var(--moss)}.brand-lockup{display:flex;align-items:center;gap:10px;text-decoration:none}.brand-mark{width:36px;height:36px;object-fit:contain;border-radius:4px}.brand-copy{display:flex;flex-direction:column;line-height:1;gap:2px}.brand-title{font-size:1rem;font-weight:700;color:var(--ink)}.brand-subtitle{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.nav,.tabs{display:flex;gap:10px;flex-wrap:wrap}.nav a,.tabs button,.btn{border:none;border-radius:999px;padding:11px 16px;cursor:pointer}.nav a{color:var(--muted)}.nav a:hover,.nav a.active,.tabs button.active{background:rgba(21,21,21,.06);color:var(--ink)}.btn.primary{background:var(--ink);color:#fff}.btn.soft,.tabs button{background:rgba(21,21,21,.06);color:var(--muted)}
+.hero{padding:16px 0 14px;display:grid;grid-template-columns:1.25fr .95fr;gap:18px}.panel{background:rgba(255,250,242,.82);border:1px solid rgba(21,21,21,.08);border-radius:var(--radius);box-shadow:var(--shadow)}.heroMain,.card{padding:18px 22px}.heroMain{position:relative;overflow:hidden;background:linear-gradient(135deg,#134d44,#1B6358)!important;border-color:transparent!important}.heroMain:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%)}.eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.16em;color:rgba(255,255,255,.55);margin-bottom:8px}.heroTitle,.title{font-family:'Space Grotesk',sans-serif;letter-spacing:-.05em}.heroTitle{font-size:clamp(1.4rem,2.4vw,2.2rem);line-height:1.05;max-width:18ch;color:#fff}.copy,.sub{color:var(--muted);line-height:1.6}.copy{margin-top:10px;color:rgba(255,255,255,.65);font-size:.88rem}.heroSide,.metrics,.grid2,.grid3,.fields{display:grid;gap:12px}.heroSide,.grid3{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1.12fr .88fr}.metric,.item,.person,.log,.flag,.doc{background:#fff;border:1px solid rgba(21,21,21,.08);border-radius:18px;padding:16px}.metric span,.small{display:block;font-size:.8rem;color:var(--muted);margin-bottom:8px}.metric strong{font-family:'Space Grotesk',sans-serif;font-size:1.45rem}
+.section{display:none;padding-bottom:26px}.section.active{display:block}.stack,.list,.board{display:grid;gap:12px}.board{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}.item,.log,.flag,.doc{display:block}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}.tagRow{display:flex;gap:8px;flex-wrap:wrap}.tag{padding:7px 10px;border-radius:999px;font-size:.78rem}.moss{background:var(--mossSoft);color:var(--moss)}.amber{background:var(--amberSoft);color:var(--amber)}.clay{background:var(--claySoft);color:var(--clay)}.sky{background:var(--skySoft);color:var(--sky)}.ghost{background:rgba(21,21,21,.05);color:var(--muted)}.fields{grid-template-columns:1fr 1fr}.field{display:grid;gap:8px}.field label{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.field input,.field select,.field textarea{width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(21,21,21,.1);background:#fff;outline:none;color:var(--ink)}.field textarea{min-height:120px;resize:vertical}.full{grid-column:1/-1}
+.tableWrap{overflow:auto;border:1px solid rgba(21,21,21,.08);border-radius:18px;background:#fff}table{width:100%;border-collapse:collapse}th,td{padding:12px 14px;text-align:left;border-bottom:1px solid rgba(21,21,21,.06);vertical-align:top}th{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:rgba(21,21,21,.03)}td input,td textarea,td select{width:100%;border:none;background:transparent;outline:none;color:var(--ink);padding:0}td textarea{min-height:60px;resize:vertical}.mono{font-family:'IBM Plex Mono',monospace}.empty{padding:22px;border-radius:18px;background:rgba(21,21,21,.03);color:var(--muted);text-align:center;line-height:1.6}.msg{font-size:.9rem;color:var(--muted)}.toast{position:fixed;right:20px;bottom:20px;z-index:120;padding:12px 16px;border-radius:16px;background:var(--ink);color:#fff;opacity:0;transform:translateY(10px);transition:.2s ease}.toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:1100px){.hero,.grid2{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.shell{width:min(100vw - 20px,1440px)}.heroSide,.fields,.grid3,.metrics{grid-template-columns:1fr}.heroMain,.card{padding:18px}}
 </style>
+<link rel="stylesheet" href="/dashboard/brand.css?v=20260409-schoolbrand">
 </head>
 <body>
+<header class="top"><div class="shell topIn"><a class="brand brand-lockup" href="/dashboard"><img class="brand-mark" src="/dashboard/logo.jpeg" alt="AECHS logo"><span class="brand-copy"><span class="brand-title">CHS.ai</span><span class="brand-subtitle">AECHS Staff Assistant</span></span></a><nav class="nav"><a href="/dashboard">Command</a><a href="/dashboard/people">Directory</a><a href="/dashboard/chat">Chat</a><a class="active" href="/dashboard/admin">Admin</a><span style="width:1px;height:18px;background:rgba(21,21,21,.15);display:inline-block;margin:0 4px;vertical-align:middle;"></span><a href="/dashboard/notifications">Notifications</a></nav><div class="nav"><button class="btn soft" onclick="location.href='/dashboard/people'">Open Staff</button><button class="btn primary" onclick="refreshCurrent()">Refresh</button></div></div></header>
+<main class="shell">
+  <section class="hero">
+    <article class="panel heroMain"><div class="eyebrow">Admin Control</div><h1 class="heroTitle">Knowledge, access, prompt, and oversight.</h1><p class="copy">This rebuilt admin page focuses on live school operations, prompt control, structured knowledge, access codes, flagged answers, and document history without the broken duplicate staff directory.</p><div class="nav" style="margin-top:20px"><button class="btn primary" onclick="setSection('overview')">Open Overview</button><button class="btn soft" onclick="location.href='/dashboard/people'">Manage Staff Profiles</button></div></article>
+    <aside class="panel heroSide" id="heroStats"><div class="metric"><span>Loading</span><strong>...</strong></div></aside>
+  </section>
 
-<!-- HEADER -->
-<header>
-  <div class="header-brand">
-    <div class="brand-name">CHS.ai</div>
-    <div class="brand-div"></div>
-    <div class="brand-sub">Admin Panel</div>
-  </div>
-  <div class="header-nav">
-    <a href="/dashboard/chat" class="nav-btn">Open Chat →</a>
-    <a href="/dashboard" class="nav-btn">Dashboard</a>
-  </div>
-</header>
+  <div class="tabs" id="tabs"></div>
 
-<!-- TOP TABS -->
-<div class="top-nav">
-  <button class="top-tab active" onclick="switchPanel('overview',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Overview</button>
-  <button class="top-tab" onclick="switchPanel('activity',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Live Activity</button>
-  <button class="top-tab" onclick="switchPanel('users',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Users</button>
-  <button class="top-tab" onclick="switchPanel('knowledge',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.5-.6 2.8-1.6 3.8A4 4 0 0 1 16 13a4 4 0 0 1-4 4 4 4 0 0 1-4-4 4 4 0 0 1 1.6-3.2A4 4 0 0 1 8 6a4 4 0 0 1 4-4z"/><path d="M12 22v-5M9 17H7a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-2"/></svg> Knowledge Base</button>
-  <button class="top-tab" onclick="switchPanel('prompt',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Prompt Settings</button>
-  <button class="top-tab" onclick="switchPanel('documents',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Document History</button>
-</div>
-
-<!-- ════════════ OVERVIEW PANEL (Phase 1 #15) ════════════ -->
-<div id="panel-overview" class="panel active">
-  <div class="panel-inner">
-    <div class="panel-title">Overview</div>
-    <div class="panel-sub">Live snapshot of CHS.ai activity.</div>
-
-    <!-- Stat Cards -->
-    <div class="stat-grid">
-      <div class="stat-card green">
-        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div class="stat-value" id="stat-users">—</div>
-        <div class="stat-label">Total Users</div>
+  <section class="section active" id="sec-overview">
+    <div class="stack">
+      <div class="grid2">
+        <div class="panel card"><div class="head"><div><div class="title">Operational Snapshot</div><div class="sub">Live counts from the school-logic layer.</div></div></div><div class="metrics" id="overviewMetrics"><div class="metric"><span>Loading</span><strong>...</strong></div></div></div>
+        <div class="panel card"><div class="head"><div><div class="title">Watchlists</div><div class="sub">What needs admin attention first.</div></div></div><div class="list" id="watchList"><div class="empty">Loading watchlists.</div></div></div>
       </div>
-      <div class="stat-card blue">
-        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="stat-value" id="stat-msgs">—</div>
-        <div class="stat-label">Messages Today</div>
-      </div>
-      <div class="stat-card orange">
-        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-        <div class="stat-value" id="stat-docs">—</div>
-        <div class="stat-label">Documents Generated</div>
-      </div>
-      <div class="stat-card purple">
-        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-        <div class="stat-value" id="stat-active">—</div>
-        <div class="stat-label">Active Today</div>
-      </div>
+      <div class="panel card"><div class="head"><div><div class="title">Recent Activity</div><div class="sub">Latest bot traffic and operational movement.</div></div></div><div class="list" id="overviewLogs"><div class="empty">Loading recent activity.</div></div></div>
     </div>
+  </section>
 
-    <!-- Recent Messages Preview -->
-    <div class="card">
-      <div class="activity-header">
-        <div class="card-label" style="margin:0">Recent Messages</div>
-        <button class="refresh-btn" onclick="loadOverview()">↻ Refresh</button>
-      </div>
-      <div class="activity-list" id="overview-activity">
-        <div class="loading-state"><span class="spin"></span>Loading...</div>
-      </div>
+  <section class="section" id="sec-live">
+    <div class="stack">
+      <div class="panel card"><div class="head"><div><div class="title">Presence Board</div><div class="sub">Who is free, in class, in meeting, or off campus right now.</div></div></div><div class="board" id="liveBoard"><div class="empty">Loading board.</div></div></div>
+      <div class="panel card"><div class="head"><div><div class="title">Message Log</div><div class="sub">Recent incoming and outgoing messages.</div></div></div><div class="list" id="liveLogs"><div class="empty">Loading logs.</div></div></div>
     </div>
+  </section>
 
-    <!-- Top Senders -->
-    <div class="card">
-      <div class="card-label">Top Active Users</div>
-      <div id="top-senders">
-        <div class="loading-state"><span class="spin"></span>Loading...</div>
-      </div>
+  <section class="section" id="sec-access">
+    <div class="stack">
+      <div class="panel card"><div class="head"><div><div class="title">Access Management</div><div class="sub">Manage staff web access codes from their profiles in the Staff Directory.</div></div></div><div class="nav" style="margin-top:4px"><button class="btn primary" onclick="location.href='/dashboard/people'">Open Staff Profiles</button></div></div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- ════════════ LIVE ACTIVITY PANEL (Phase 1 #16) ════════════ -->
-<div id="panel-activity" class="panel">
-  <div class="panel-inner">
-    <div class="panel-title">Live Activity</div>
-    <div class="panel-sub">All incoming and outgoing bot messages in real time.</div>
+  <section class="section" id="sec-knowledge">
+    <div class="panel card"><div class="head"><div><div class="title">Knowledge Editor</div><div class="sub">Structured information the assistant should answer from deterministically.</div></div><div class="nav"><button class="btn soft" onclick="addKnowledgeRow()">Add Row</button><button class="btn primary" onclick="saveKnowledge()">Save Section</button></div></div><div class="tabs" id="knowledgeTabs"></div><div class="tableWrap" id="knowledgeTable"><div class="empty">Loading knowledge.</div></div></div>
+  </section>
 
-    <div class="card">
-      <div class="activity-header">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="live-dot"></span>
-          <span style="font-size:13px;font-weight:500;color:var(--green);">Live Feed</span>
-          <span class="count-pill" id="activity-count">0 messages</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select id="activity-filter" onchange="renderActivity()" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:var(--green-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;">
-            <option value="all">All Messages</option>
-            <option value="in">Incoming Only</option>
-            <option value="out">Outgoing Only</option>
-          </select>
-          <button class="refresh-btn" onclick="loadActivity()">↻ Refresh</button>
-        </div>
-      </div>
-      <div class="activity-list" id="activity-list">
-        <div class="loading-state"><span class="spin"></span>Loading activity...</div>
-      </div>
+  <section class="section" id="sec-prompt">
+    <div class="panel card"><div class="head"><div><div class="title">System Prompt</div><div class="sub">Changes apply immediately to new conversations.</div></div><button class="btn primary" onclick="savePrompt()">Save Prompt</button></div><div class="field"><label for="promptEditor">Prompt</label><textarea id="promptEditor" placeholder="Loading prompt..."></textarea></div><div class="msg" id="promptMsg" style="margin-top:10px"></div></div>
+  </section>
+
+  <section class="section" id="sec-flags">
+    <div class="stack">
+      <div class="panel card"><div class="head"><div><div class="title">Flag a Reply Manually</div><div class="sub">Capture a bad or risky answer directly from admin.</div></div></div><div class="fields"><div class="field"><label for="manualResponse">Bot Reply</label><textarea id="manualResponse" placeholder="Paste the reply here"></textarea></div><div class="field"><label for="manualNote">What Was Wrong</label><textarea id="manualNote" placeholder="Wrong schedule, unclear answer, wrong policy"></textarea></div></div><div class="nav" style="margin-top:14px"><button class="btn primary" onclick="submitManualFlag()">Flag Reply</button><a class="btn soft" href="/dashboard/api/flags/export">Export</a></div><div class="msg" id="flagsMsg" style="margin-top:10px"></div></div>
+      <div class="panel card"><div class="head"><div><div class="title">Flag Queue</div><div class="sub">Open and resolved responses with note updates.</div></div></div><div class="list" id="flagsList"><div class="empty">Loading flags.</div></div></div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- ════════════ USERS PANEL (unchanged) ════════════ -->
-<div id="panel-users" class="panel">
-  <div class="panel-inner">
-    <div class="panel-title">Users</div>
-    <div class="panel-sub">Manage staff access to the CHS.ai web chat.</div>
-
-    <div class="card">
-      <div class="card-label">Add New User</div>
-      <div class="form-row">
-        <div class="field">
-          <label>Name</label>
-          <input type="text" id="new-name" placeholder="e.g. Mr. Jean" />
-        </div>
-        <div class="field">
-          <label>Access Code</label>
-          <input type="text" id="new-code" placeholder="e.g. JB2526" />
-        </div>
-        <button class="btn btn-green" style="height:42px;align-self:flex-end;" onclick="addUser()">Add User</button>
-      </div>
-      <div class="msg" id="add-msg"></div>
-    </div>
-
-    <div class="card">
-      <div class="tbl-header">
-        <div class="card-label" style="margin:0">Current Users</div>
-        <div class="count-pill" id="user-count">—</div>
-      </div>
-      <div id="users-loading" class="loading-state"><span class="spin"></span>Loading users...</div>
-      <table id="users-table" style="display:none">
-        <thead><tr><th>#</th><th>Name</th><th>Access Code</th><th></th></tr></thead>
-        <tbody id="users-tbody"></tbody>
-      </table>
-      <div id="users-empty" class="empty-row" style="display:none">No users yet. Add one above.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════ KNOWLEDGE PANEL (unchanged) ════════════ -->
-<div id="panel-knowledge" class="panel">
-  <div class="panel-inner wide">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div class="panel-title">Knowledge Base</div>
-      <button class="btn btn-green" onclick="saveAll()">Save All Changes</button>
-    </div>
-    <div class="panel-sub">Edit knowledge files — changes take effect on next bot restart.</div>
-
-    <div class="sub-tabs">
-      <button class="sub-tab active" onclick="switchKTab('wifi',this)">WiFi</button>
-      <button class="sub-tab" onclick="switchKTab('passwords',this)">Passwords</button>
-      <button class="sub-tab" onclick="switchKTab('eskool',this)">ESkool</button>
-      <button class="sub-tab" onclick="switchKTab('devices',this)">Devices</button>
-      <button class="sub-tab" onclick="switchKTab('contacts',this)">Contacts</button>
-      <button class="sub-tab" onclick="switchKTab('quick',this)">+ Quick Add</button>
-    </div>
-
-    <!-- WiFi -->
-    <div id="ktab-wifi" class="ktab">
-      <div class="k-section">
-        <div class="k-section-head"><span class="k-section-title">WiFi Networks</span><span class="count-pill" id="wifi-count">0 entries</span></div>
-        <div class="k-table-wrap"><table class="k-table">
-          <thead><tr><th>Network Name</th><th>Password</th><th>Login Required</th><th>Username</th><th>Login Password</th><th>Notes</th><th></th></tr></thead>
-          <tbody id="wifi-body"><tr><td colspan="7"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('wifi',['Network Name','Password','Login Required','Username','Login Password','Notes'])">+ Add Row</button><span class="k-add-hint">Add a WiFi network</span></div>
-      </div>
-    </div>
-
-    <!-- Passwords -->
-    <div id="ktab-passwords" class="ktab" style="display:none">
-      <div class="k-section">
-        <div class="k-section-head"><span class="k-section-title">Passwords & Credentials</span><span class="count-pill" id="passwords-count">0 entries</span></div>
-        <div class="k-table-wrap"><table class="k-table">
-          <thead><tr><th>System / Software</th><th>Username</th><th>Password</th><th>URL / Location</th><th>Notes</th><th></th></tr></thead>
-          <tbody id="passwords-body"><tr><td colspan="6"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('passwords',['System / Software','Username','Password','URL / Location','Notes'])">+ Add Row</button><span class="k-add-hint">Add a credential</span></div>
-      </div>
-    </div>
-
-    <!-- ESkool -->
-    <div id="ktab-eskool" class="ktab" style="display:none">
-      <div class="k-section">
-        <div class="k-section-head"><span class="k-section-title">ESkool Issues & Solutions</span><span class="count-pill" id="eskool-count">0 entries</span></div>
-        <div class="k-table-wrap"><table class="k-table">
-          <thead><tr><th>Issue</th><th>Solution</th><th>Notes</th><th></th></tr></thead>
-          <tbody id="eskool-body"><tr><td colspan="4"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('eskool',['Issue','Solution','Notes'])">+ Add Row</button><span class="k-add-hint">Add an ESkool issue</span></div>
-      </div>
-    </div>
-
-    <!-- Devices -->
-    <div id="ktab-devices" class="ktab" style="display:none">
-      <div class="k-section">
-        <div class="k-section-head"><span class="k-section-title">Devices & Hardware</span><span class="count-pill" id="devices-count">0 entries</span></div>
-        <div class="k-table-wrap"><table class="k-table">
-          <thead><tr><th>Device Type</th><th>Location / Model</th><th>Common Issue</th><th>Solution</th><th>Notes</th><th></th></tr></thead>
-          <tbody id="devices-body"><tr><td colspan="6"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('devices',['Device Type','Location / Model','Common Issue','Solution','Notes'])">+ Add Row</button><span class="k-add-hint">Add a device entry</span></div>
-      </div>
-    </div>
-
-    <!-- Contacts -->
-    <div id="ktab-contacts" class="ktab" style="display:none">
-      <div class="k-section">
-        <div class="k-section-head"><span class="k-section-title">Contacts</span><span class="count-pill" id="contacts-count">0 entries</span></div>
-        <div class="k-table-wrap"><table class="k-table">
-          <thead><tr><th>Name</th><th>Role</th><th>WhatsApp / Phone</th><th>Handles</th><th></th></tr></thead>
-          <tbody id="contacts-body"><tr><td colspan="5"><div class="loading-state"><span class="spin"></span>Loading...</div></td></tr></tbody>
-        </table></div>
-        <div class="k-add-row"><button class="btn btn-sm-green" onclick="addRow('contacts',['Name','Role','WhatsApp / Phone','Handles'])">+ Add Row</button><span class="k-add-hint">Add a contact</span></div>
-      </div>
-    </div>
-
-    <!-- Quick Add -->
-    <div id="ktab-quick" class="ktab" style="display:none">
-      <div class="card">
-        <div class="card-label">Quick Add to Knowledge Base</div>
-        <div class="quick-grid">
-          <div class="field">
-            <label>Category</label>
-            <select id="quick-category" onchange="renderQuickFields()">
-              <option value="wifi">WiFi</option>
-              <option value="passwords">Password / Credential</option>
-              <option value="eskool">ESkool Issue</option>
-              <option value="devices">Device / Hardware</option>
-              <option value="contacts">Contact</option>
-            </select>
-          </div>
-          <div id="quick-fields"></div>
-          <div><button class="btn btn-green" onclick="quickAdd()">Add to Knowledge Base</button></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ════════════ PROMPT SETTINGS PANEL (Phase 1 #17) ════════════ -->
-<div id="panel-prompt" class="panel">
-  <div class="panel-inner">
-    <div class="panel-title">Prompt Settings</div>
-    <div class="panel-sub">View and edit the AI system prompt. Changes apply immediately to new conversations.</div>
-
-    <div class="prompt-status">
-      <span class="dot"></span>
-      <span>Prompt is active — the bot reads this on every message.</span>
-    </div>
-
-    <div class="card">
-      <div class="card-label">System Prompt</div>
-      <textarea class="prompt-textarea" id="prompt-editor" placeholder="Loading prompt..."></textarea>
-      <div class="prompt-actions">
-        <button class="btn btn-green" onclick="savePrompt()">Save Prompt</button>
-        <button class="btn btn-sm-green" onclick="loadPrompt()">↻ Reset to Current</button>
-        <button class="btn btn-sm-green" onclick="copyPrompt()">Copy</button>
-      </div>
-      <div class="prompt-note">
-        Note: The system prompt is prepended to every conversation. Editing it affects all users immediately.<br>
-        Knowledge base data (contacts, schedules, WiFi) is injected automatically — you don't need to include it here.
-      </div>
-      <div class="msg" id="prompt-msg"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Prompt Stats</div>
-      <div style="display:flex;gap:24px;flex-wrap:wrap;">
-        <div><span style="font-size:22px;font-weight:600;color:var(--green);" id="prompt-chars">—</span><div style="font-size:12px;color:var(--text-lt);margin-top:2px;">Characters</div></div>
-        <div><span style="font-size:22px;font-weight:600;color:var(--green);" id="prompt-words">—</span><div style="font-size:12px;color:var(--text-lt);margin-top:2px;">Words</div></div>
-        <div><span style="font-size:22px;font-weight:600;color:var(--green);" id="prompt-tokens">—</span><div style="font-size:12px;color:var(--text-lt);margin-top:2px;">Est. Tokens</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════ DOCUMENT HISTORY PANEL (Phase 1 #18) ════════════ -->
-<div id="panel-documents" class="panel">
-  <div class="panel-inner">
-    <div class="panel-title">Document History</div>
-    <div class="panel-sub">All documents generated by CHS.ai. Click to re-download.</div>
-
-    <div class="card">
-      <div class="tbl-header">
-        <div class="card-label" style="margin:0">Generated Documents</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="count-pill" id="doc-count">—</div>
-          <button class="refresh-btn" onclick="loadDocuments()">↻ Refresh</button>
-        </div>
-      </div>
-      <div id="doc-history-list">
-        <div class="loading-state"><span class="spin"></span>Loading documents...</div>
-      </div>
-    </div>
-  </div>
-</div>
-
+  <section class="section" id="sec-documents">
+    <div class="panel card"><div class="head"><div><div class="title">Document History</div><div class="sub">Generated files available for re-download.</div></div></div><div class="list" id="docsList"><div class="empty">Loading documents.</div></div></div>
+  </section>
+</main>
 <div class="toast" id="toast"></div>
 
 <script>
-// ── PANEL SWITCHER ──
-function switchPanel(name, btn) {
-  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  if (name === 'activity')  loadActivity();
-  if (name === 'prompt')    loadPrompt();
-  if (name === 'documents') loadDocuments();
-  if (name === 'users')     loadUsers();
-}
+const SECTIONS=['overview','live','access','knowledge','prompt','flags','documents'];
+const LABELS={overview:'Overview',live:'Live',access:'Access',knowledge:'Knowledge',prompt:'Prompt',flags:'Flags',documents:'Documents'};
+const KNOW={wifi:{label:'WiFi',endpoint:'wifi',cols:[['network_name','Network'],['password','Password'],['login_required','Login Required'],['username','Username'],['login_password','Login Password'],['notes','Notes',1]]},calendar:{label:'Calendar',endpoint:'calendar',cols:[['date','Date'],['day','Day'],['event','Event',1],['type','Type'],['school_day','School Day']]},eskool:{label:'ESkool',endpoint:'eskool',cols:[['issue','Issue',1],['solution','Solution',1],['category','Category'],['notes','Notes',1]]},passwords:{label:'Passwords',endpoint:'passwords',cols:[['system','System'],['username','Username'],['password','Password'],['url','URL'],['notes','Notes',1]]},devices:{label:'Devices',endpoint:'devices',cols:[['device_name','Device'],['type','Type'],['location','Location'],['serial','Serial'],['notes','Notes',1]]},contacts:{label:'Contacts',endpoint:'contacts',cols:[['name','Name'],['title','Title'],['role','Role'],['phone','Phone'],['department','Department'],['subjects','Subjects'],['handles','Handles',1]]}};
+let current='overview', currentKnow='wifi', overview=null, users=[], knowData={}, flags=[], docs=[];
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const roleLabel=r=>!r?'Staff':r.replace(/_/g,' ').replace(/\bhod\b/i,'HoD').replace(/\bit\b/i,'IT').replace(/\b\w/g,c=>c.toUpperCase());
+const tone=s=>s==='free'?'moss':s==='class'?'amber':s==='meeting'?'clay':s==='on_duty'||s==='campus_only'?'sky':s==='needs_review'||s==='needs_review_day'?'sky':'ghost';
+function toast(msg,err=false){const t=$('toast');t.textContent=msg;t.style.background=err?'var(--clay)':'var(--ink)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+function drawTabs(){ $('tabs').innerHTML=SECTIONS.map(s=>`<button class="${current===s?'active':''}" onclick="setSection('${s}')">${LABELS[s]}</button>`).join('') }
+function setSection(s){current=s;drawTabs();document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));$(`sec-${s}`).classList.add('active');refreshCurrent()}
+async function refreshCurrent(){if(current==='overview'||current==='live') await loadOverview(); if(current==='access') await loadUsers(); if(current==='knowledge') await loadKnowledge(currentKnow); if(current==='prompt') await loadPrompt(); if(current==='flags') await loadFlags(); if(current==='documents') await loadDocs()}
 
-// ── TOAST ──
-function toast(msg, isErr=false) {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className='toast show'+(isErr?' err':'');
-  setTimeout(()=>el.classList.remove('show'),3200);
-}
+async function loadOverview(){try{const [o,f,d]=await Promise.all([fetch('/dashboard/api/ops/overview'),fetch('/dashboard/api/flags'),fetch('/dashboard/api/documents')]);overview=await o.json();flags=f.ok?await f.json():[];docs=d.ok?await d.json():[];renderOverview();renderLive()}catch{ $('overviewLogs').innerHTML='<div class="empty">Failed to load overview.</div>'}}
+function renderOverview(){if(!overview) return; $('heroStats').innerHTML=[['Active Staff',overview.stats.total_staff],['Web Access',overview.stats.web_access_enabled],['Open Flags',flags.filter(x=>!x.resolved).length],['Documents',docs.length]].map(([l,v])=>`<div class="metric"><span>${l}</span><strong>${v}</strong></div>`).join(''); $('overviewMetrics').innerHTML=[['On Campus',overview.stats.on_campus_now],['Free Teachers',overview.stats.free_teachers_now],['In Class',overview.stats.in_class_now],['Meetings',overview.stats.in_meeting_now],['Teacher-Like',overview.stats.teacher_like],['Missing Access',overview.missing_access.length],['Schedule Review',overview.stats.availability_review_needed||0]].map(([l,v])=>`<div class="metric"><span>${l}</span><strong>${v}</strong></div>`).join('');
+  const watch=[...((overview.needs_schedule_review||[]).slice(0,4).map(p=>({title:p.full_name,meta:`${p.primary_department||'No department'} · availability needs review`,href:`/dashboard/staff/${p.id}`,cta:'Review Schedule'}))),...overview.missing_access.slice(0,4).map(p=>({title:p.full_name,meta:`${p.primary_department||'No department'} · needs web code`,href:`/dashboard/staff/${p.id}`,cta:'Open Profile'})),...flags.filter(f=>!f.resolved).slice(0,3).map(f=>({title:f.question||'Flagged response',meta:f.note||'Needs review',href:'#flags',cta:'Open Flags'}))];
+  $('watchList').innerHTML=watch.length?watch.map(w=>`<a class="item" href="${w.href}" ${w.href==='#flags'?'onclick="setSection(\'flags\');return false;"':''}><div><strong>${esc(w.title)}</strong><span class="small">${esc(w.meta)}</span></div><strong>${w.cta}</strong></a>`).join(''):'<div class="empty">No watchlist items.</div>';
+  $('overviewLogs').innerHTML=overview.recent_logs.length?overview.recent_logs.map(l=>`<div class="log"><div class="head"><strong>${l.direction==='in'?'Inbound':'Outbound'}</strong><span>${new Date(l.timestamp).toLocaleString()}</span></div><div class="small">${esc(l.from||'Unknown')}</div><div>${esc(l.body||'')}</div></div>`).join(''):'<div class="empty">No recent logs available.</div>'}
+function renderLive(){if(!overview) return; $('liveBoard').innerHTML=overview.board.length?overview.board.map(p=>`<a class="person" href="/dashboard/staff/${p.id}"><div class="head"><div><strong>${esc(p.full_name)}</strong><div class="small">${esc(p.primary_department||'No department')} · ${esc(roleLabel(p.role_type))}</div></div><span class="tag ${tone(p.current_status.code)}">${esc(p.current_status.label)}</span></div><div class="tagRow"><span class="tag ghost">${p.schedule_summary.class_periods} classes</span><span class="tag ghost">${p.schedule_summary.meeting_periods} meetings</span><span class="tag ghost">${p.schedule_summary.free_periods} free</span></div><div class="small">${p.web_code?'Web access active':'Missing web access'}</div></a>`).join(''):'<div class="empty">No live board data.</div>'; $('liveLogs').innerHTML=overview.recent_logs.length?overview.recent_logs.map(l=>`<div class="log"><div class="head"><strong>${l.direction==='in'?'Inbound':'Outbound'}</strong><span>${new Date(l.timestamp).toLocaleString()}</span></div><div class="small">${esc(l.from||'Unknown')}</div><div>${esc(l.body||'')}</div></div>`).join(''):'<div class="empty">No logs available.</div>'}
 
-// ── USERS ──
-async function loadUsers() {
-  try {
-    const res = await fetch('/dashboard/api/users');
-    renderUsers(await res.json());
-  } catch { document.getElementById('users-loading').innerHTML = 'Failed to load users.'; }
-}
+async function loadUsers(){try{const r=await fetch('/dashboard/api/users');users=await r.json();$('usersBody').innerHTML=users.length?users.map(u=>`<tr><td><strong>${esc(u.name)}</strong></td><td><span class="mono">${esc(u.code)}</span></td><td><select onchange="updateUserMode('${encodeURIComponent(u.code)}',this.value)"><option value="auto" ${u.mode==='auto'?'selected':''}>Auto</option><option value="teacher" ${u.mode==='teacher'?'selected':''}>Teacher</option><option value="student" ${u.mode==='student'?'selected':''}>Student</option><option value="admin" ${u.mode==='admin'?'selected':''}>Admin</option></select></td><td><div class="nav"><button class="btn soft" onclick="location.href='/dashboard/profile/${encodeURIComponent(u.code)}'">Open</button><button class="btn soft" onclick="removeUser('${encodeURIComponent(u.code)}','${esc(u.name)}')">Remove</button></div></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty">No legacy users found.</div></td></tr>'}catch{$('usersBody').innerHTML='<tr><td colspan="4"><div class="empty">Failed to load users.</div></td></tr>'}}
+async function addUser(){const name=$('newUserName').value.trim(),code=$('newUserCode').value.trim(); if(!name||!code){$('usersMsg').textContent='Name and code are required.';return} if(code.length<6){$('usersMsg').textContent='Code must be at least 6 characters.';return} try{const r=await fetch('/dashboard/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,code})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to add user'); $('newUserName').value='';$('newUserCode').value='';$('usersMsg').textContent=`${name} added.`;toast('Legacy user added');loadUsers()}catch(e){$('usersMsg').textContent=e.message;toast(e.message,true)}}
+async function updateUserMode(code,mode){try{const r=await fetch(`/dashboard/api/users/${code}/mode`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to update mode'); toast('Mode updated')}catch(e){toast(e.message,true)}}
+async function removeUser(code,name){if(!confirm(`Remove ${decodeURIComponent(name)}?`)) return; try{const r=await fetch(`/dashboard/api/users/${code}`,{method:'DELETE'}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to remove user'); toast('Legacy user removed'); loadUsers()}catch(e){toast(e.message,true)}}
 
-function renderUsers(users) {
-  document.getElementById('users-loading').style.display = 'none';
-  const tbody = document.getElementById('users-tbody');
-  const table = document.getElementById('users-table');
-  const empty = document.getElementById('users-empty');
-  document.getElementById('user-count').textContent = `${users.length} user${users.length !== 1 ? 's' : ''}`;
-  if (users.length === 0) { table.style.display = 'none'; empty.style.display = 'block'; return; }
-  table.style.display = 'table'; empty.style.display = 'none';
-  tbody.innerHTML = '';
-  users.forEach((u, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="color:var(--text-lt);font-size:12px;">${i+1}</td><td><strong>${u.name}</strong></td><td><span class="code-tag">${u.code}</span></td><td><button class="btn btn-red" onclick="deleteUser('${u.code}','${u.name}')">Remove</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
+function drawKnowTabs(){ $('knowledgeTabs').innerHTML=Object.entries(KNOW).map(([k,c])=>`<button class="${currentKnow===k?'active':''}" onclick="loadKnowledge('${k}')">${c.label}</button>`).join('') }
+async function loadKnowledge(key=currentKnow){currentKnow=key; drawKnowTabs(); const cfg=KNOW[key]; try{if(!knowData[key]){const r=await fetch(`/dashboard/api/knowledge/${cfg.endpoint}`); knowData[key]=r.ok?await r.json():[]} renderKnowTable()}catch{$('knowledgeTable').innerHTML='<div class="empty">Failed to load this section.</div>'}}
+function renderKnowTable(){const cfg=KNOW[currentKnow], rows=knowData[currentKnow]||[]; $('knowledgeTable').innerHTML=`<table><thead><tr>${cfg.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${rows.length?rows.map((row,i)=>`<tr>${cfg.cols.map(c=>`<td>${c[2]?`<textarea oninput="updateKnow(${i},'${c[0]}',this.value)">${esc(row[c[0]]??'')}</textarea>`:`<input type="text" value="${esc(row[c[0]]??'')}" oninput="updateKnow(${i},'${c[0]}',this.value)">`}</td>`).join('')}<td><button class="btn soft" onclick="delKnow(${i})">Delete</button></td></tr>`).join(''):`<tr><td colspan="${cfg.cols.length+1}"><div class="empty">No rows yet for this section.</div></td></tr>`}</tbody></table>`}
+function updateKnow(i,k,v){knowData[currentKnow][i][k]=v}
+function addKnowledgeRow(){const cfg=KNOW[currentKnow], row={}; cfg.cols.forEach(c=>row[c[0]]=''); knowData[currentKnow]=knowData[currentKnow]||[]; knowData[currentKnow].push(row); renderKnowTable()}
+function delKnow(i){knowData[currentKnow].splice(i,1); renderKnowTable()}
+async function saveKnowledge(){const cfg=KNOW[currentKnow], rows=(knowData[currentKnow]||[]).map(r=>{const clean={}; cfg.cols.forEach(c=>clean[c[0]]=r[c[0]]??null); return clean}); try{const r=await fetch(`/dashboard/api/knowledge/${cfg.endpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rows)}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to save knowledge'); toast(`${cfg.label} saved`)}catch(e){toast(e.message,true)}}
 
-async function addUser() {
-  const name = document.getElementById('new-name').value.trim();
-  const code = document.getElementById('new-code').value.trim();
-  const msg  = document.getElementById('add-msg');
-  if (!name || !code) { msg.textContent = 'Both fields are required.'; msg.className = 'msg err'; return; }
-  try {
-    const res  = await fetch('/dashboard/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,code}) });
-    const data = await res.json();
-    if (data.ok) {
-      msg.textContent = `✓ ${name} added.`; msg.className = 'msg ok';
-      document.getElementById('new-name').value = '';
-      document.getElementById('new-code').value = '';
-      loadUsers();
-    } else { msg.textContent = data.error || 'Failed.'; msg.className = 'msg err'; }
-  } catch { msg.textContent = 'Server error.'; msg.className = 'msg err'; }
-  setTimeout(() => msg.textContent = '', 4000);
-}
+async function loadPrompt(){try{const r=await fetch('/dashboard/api/prompt'); const d=await r.json(); $('promptEditor').value=d.prompt||''; $('promptMsg').textContent=''}catch{$('promptMsg').textContent='Failed to load prompt.'}}
+async function savePrompt(){try{const r=await fetch('/dashboard/api/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:$('promptEditor').value})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to save prompt'); $('promptMsg').textContent='Prompt saved.'; toast('Prompt saved')}catch(e){$('promptMsg').textContent=e.message; toast(e.message,true)}}
 
-async function deleteUser(code, name) {
-  if (!confirm(`Remove ${name} (${code})?`)) return;
-  try {
-    await fetch(`/dashboard/api/users/${encodeURIComponent(code)}`, { method:'DELETE' });
-    loadUsers(); toast('User removed.');
-  } catch { toast('Failed to remove.', true); }
-}
+async function loadFlags(){try{const r=await fetch('/dashboard/api/flags'); flags=await r.json(); $('flagsList').innerHTML=flags.length?flags.map(f=>`<div class="flag"><div class="head"><div><strong>${esc(f.question||'Flagged response')}</strong><div class="small">${f.resolved?'Resolved':'Open'} · ${new Date(f.timestamp).toLocaleString()}</div></div><div class="tagRow"><span class="tag ${f.resolved?'sky':'clay'}">${f.resolved?'Resolved':'Open'}</span><span class="tag ghost">${esc(f.source||'chat')}</span></div></div><div>${esc(f.response||'')}</div><div class="field" style="margin-top:12px"><label>Note</label><textarea onchange="saveFlagNote('${f.id}',this.value)">${esc(f.note||'')}</textarea></div><div class="nav" style="margin-top:12px">${f.resolved?'':`<button class="btn soft" onclick="resolveFlag('${f.id}')">Mark Resolved</button>`}<button class="btn soft" onclick="deleteFlag('${f.id}')">Delete</button></div></div>`).join(''):'<div class="empty">No flagged responses yet.</div>'}catch{$('flagsList').innerHTML='<div class="empty">Failed to load flags.</div>'}}
+async function submitManualFlag(){const response=$('manualResponse').value.trim(),note=$('manualNote').value.trim(); if(!response){$('flagsMsg').textContent='Paste the bot reply first.'; return} try{const r=await fetch('/dashboard/api/flag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({response,note,from:'manual',source:'admin'})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to flag response'); $('manualResponse').value='';$('manualNote').value='';$('flagsMsg').textContent='Reply flagged.'; toast('Reply flagged'); loadFlags()}catch(e){$('flagsMsg').textContent=e.message; toast(e.message,true)}}
+async function resolveFlag(id){try{const r=await fetch(`/dashboard/api/flags/${id}/resolve`,{method:'POST'}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to resolve flag'); toast('Flag resolved'); loadFlags()}catch(e){toast(e.message,true)}}
+async function saveFlagNote(id,note){try{const r=await fetch(`/dashboard/api/flags/${id}/note`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to save note'); toast('Flag note saved')}catch(e){toast(e.message,true)}}
+async function deleteFlag(id){if(!confirm('Delete this flag?')) return; try{const r=await fetch(`/dashboard/api/flags/${id}`,{method:'DELETE'}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||'Failed to delete flag'); toast('Flag deleted'); loadFlags()}catch(e){toast(e.message,true)}}
 
-document.getElementById('new-name').addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('new-code').focus(); });
-document.getElementById('new-code').addEventListener('keydown', e => { if (e.key==='Enter') addUser(); });
+async function loadDocs(){try{const r=await fetch('/dashboard/api/documents'); docs=await r.json(); $('docsList').innerHTML=docs.length?docs.map(d=>`<a class="doc" href="${d.downloadPath}"><div class="head"><div><strong>${esc(d.title)}</strong><div class="small">${esc(d.type)} · ${d.sizeKB} KB</div></div><span>${new Date(d.timestamp).toLocaleString()}</span></div><div class="small">${esc(d.filename)}</div></a>`).join(''):'<div class="empty">No generated documents yet.</div>'}catch{$('docsList').innerHTML='<div class="empty">Failed to load documents.</div>'}}
 
-// ── KNOWLEDGE ──
-const SCHEMA = {
-  wifi:      ['Network Name','Password','Login Required','Username','Login Password','Notes'],
-  passwords: ['System / Software','Username','Password','URL / Location','Notes'],
-  eskool:    ['Issue','Solution','Notes'],
-  devices:   ['Device Type','Location / Model','Common Issue','Solution','Notes'],
-  contacts:  ['Name','Role','WhatsApp / Phone','Handles']
-};
-const TEXT_AREAS = ['Solution','Notes','Handles'];
-let kdata = {};
-
-async function loadKnowledge() {
-  for (const key of Object.keys(SCHEMA)) {
-    try {
-      const res = await fetch('/dashboard/api/knowledge/' + key);
-      kdata[key] = res.ok ? await res.json() : [];
-    } catch { kdata[key] = []; }
-    renderKTable(key);
-  }
-}
-
-function renderKTable(key) {
-  const tbody   = document.getElementById(key + '-body');
-  const countEl = document.getElementById(key + '-count');
-  const cols    = SCHEMA[key];
-  const rows    = kdata[key] || [];
-  if (countEl) countEl.textContent = rows.length + ' entries';
-  if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length+1}"><div class="loading-state">No entries yet. Add one below.</div></td></tr>`; return;
-  }
-  tbody.innerHTML = rows.map((row, i) =>
-    '<tr>' + cols.map(col => {
-      const isTA = TEXT_AREAS.includes(col);
-      const val  = (row[col]||'').toString().replace(/"/g,'&quot;').replace(/</g,'&lt;');
-      return isTA
-        ? `<td><textarea data-key="${key}" data-row="${i}" data-col="${col}" oninput="updateCell(this)" rows="2">${row[col]||''}</textarea></td>`
-        : `<td><input type="text" data-key="${key}" data-row="${i}" data-col="${col}" oninput="updateCell(this)" value="${val}"></td>`;
-    }).join('') +
-    `<td class="k-actions"><button class="btn btn-red" onclick="deleteKRow('${key}',${i})">✕</button></td></tr>`
-  ).join('');
-}
-
-function updateCell(el) {
-  const {key,row,col} = el.dataset;
-  if (!kdata[key][+row]) kdata[key][+row] = {};
-  kdata[key][+row][col] = el.value;
-}
-
-function addRow(key, cols) {
-  if (!kdata[key]) kdata[key] = [];
-  const r = {}; cols.forEach(c => r[c]='');
-  kdata[key].push(r); renderKTable(key);
-  const inputs = document.getElementById(key+'-body').querySelectorAll('input,textarea');
-  const start  = (kdata[key].length-1) * cols.length;
-  if (inputs[start]) inputs[start].focus();
-}
-
-function deleteKRow(key, i) {
-  kdata[key].splice(i,1); renderKTable(key); toast('Row deleted.');
-}
-
-async function saveAll() {
-  let ok = true;
-  for (const key of Object.keys(SCHEMA)) {
-    try {
-      const res = await fetch('/dashboard/api/knowledge/'+key, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(kdata[key]||[]) });
-      if (!res.ok) ok = false;
-    } catch { ok=false; }
-  }
-  toast(ok ? '✓ All changes saved. Restart bot to apply.' : '⚠ Some files failed to save.', !ok);
-}
-
-function switchKTab(name, btn) {
-  document.querySelectorAll('.ktab').forEach(t => t.style.display='none');
-  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('ktab-'+name).style.display='block';
-  btn.classList.add('active');
-  if (name==='quick') renderQuickFields();
-}
-
-function renderQuickFields() {
-  const cat  = document.getElementById('quick-category').value;
-  const cols = SCHEMA[cat]; if (!cols) return;
-  const grid = cols.length<=2 ? 'two-col' : cols.length<=3 ? 'three-col' : 'two-col';
-  document.getElementById('quick-fields').innerHTML =
-    `<div class="${grid}">` + cols.map(col => {
-      const id  = 'qf-'+col.replace(/[ \/]/g,'_');
-      const isTA = TEXT_AREAS.includes(col);
-      return `<div class="field"><label>${col}</label>${isTA?`<textarea id="${id}" placeholder="${col}..."></textarea>`:`<input type="text" id="${id}" placeholder="${col}...">`}</div>`;
-    }).join('') + '</div>';
-}
-
-function quickAdd() {
-  const cat=document.getElementById('quick-category').value, cols=SCHEMA[cat];
-  const row={}; let hasVal=false;
-  cols.forEach(col => {
-    const el=document.getElementById('qf-'+col.replace(/[ \/]/g,'_'));
-    row[col]=el?el.value.trim():''; if(row[col]) hasVal=true;
-  });
-  if (!hasVal) { toast('Fill in at least one field.',true); return; }
-  if (!kdata[cat]) kdata[cat]=[];
-  kdata[cat].push(row); renderKTable(cat);
-  cols.forEach(col => { const el=document.getElementById('qf-'+col.replace(/[ \/]/g,'_')); if(el) el.value=''; });
-  toast(`✓ Added to ${cat} — click Save All to persist.`);
-}
-
-// ── OVERVIEW (#15) ──
-let allLogs = [];
-
-async function loadOverview() {
-  try {
-    const [usersRes, logsRes] = await Promise.all([
-      fetch('/dashboard/api/users'),
-      fetch('/dashboard/api/logs')
-    ]);
-    const users = usersRes.ok ? await usersRes.json() : [];
-    allLogs     = logsRes.ok  ? await logsRes.json()  : [];
-
-    // Stats
-    const today = new Date().toDateString();
-    const todayLogs  = allLogs.filter(l => new Date(l.timestamp).toDateString() === today);
-    const inToday    = todayLogs.filter(l => l.direction === 'in');
-    const docsToday  = allLogs.filter(l => l.body && (l.body.includes('Generated document') || l.body.includes('.docx')));
-    const activeSenders = new Set(inToday.map(l => l.from)).size;
-
-    document.getElementById('stat-users').textContent  = users.length;
-    document.getElementById('stat-msgs').textContent   = inToday.length;
-    document.getElementById('stat-docs').textContent   = docsToday.length;
-    document.getElementById('stat-active').textContent = activeSenders;
-
-    // Recent messages (last 8 in/out pairs)
-    const recent = allLogs.slice(-16).reverse();
-    const actEl  = document.getElementById('overview-activity');
-    if (!recent.length) { actEl.innerHTML = '<div class="activity-empty">No messages yet.</div>'; return; }
-    actEl.innerHTML = recent.map(l => buildActivityItem(l)).join('');
-
-    // Top senders
-    const senderCounts = {};
-    allLogs.filter(l=>l.direction==='in' && l.from).forEach(l => {
-      senderCounts[l.from] = (senderCounts[l.from] || 0) + 1;
-    });
-    const top = Object.entries(senderCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
-    const tsEl = document.getElementById('top-senders');
-    if (!top.length) { tsEl.innerHTML = '<div style="color:var(--text-lt);font-size:13px;">No data yet.</div>'; return; }
-    tsEl.innerHTML = top.map(([from, count], i) =>
-      `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--green-d);font-size:13.5px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:11px;color:var(--text-lt);width:16px;">${i+1}</span>
-          <span style="font-family:monospace;font-size:12px;background:var(--green-d);padding:2px 8px;border-radius:6px;color:var(--green);">${from.replace('@lid','').replace('@c.us','')}</span>
-        </div>
-        <span style="font-size:13px;font-weight:600;color:var(--green);">${count} msg${count!==1?'s':''}</span>
-      </div>`
-    ).join('');
-
-  } catch(e) {
-    console.error(e);
-    document.getElementById('overview-activity').innerHTML = '<div class="activity-empty">Failed to load data.</div>';
-  }
-}
-
-// ── LIVE ACTIVITY (#16) ──
-async function loadActivity() {
-  try {
-    const res = await fetch('/dashboard/api/logs');
-    allLogs   = res.ok ? await res.json() : [];
-    renderActivity();
-  } catch {
-    document.getElementById('activity-list').innerHTML = '<div class="activity-empty">Failed to load logs.</div>';
-  }
-}
-
-function renderActivity() {
-  const filter = document.getElementById('activity-filter').value;
-  const logs   = filter === 'all' ? allLogs : allLogs.filter(l => l.direction === filter);
-  const el     = document.getElementById('activity-list');
-  const count  = document.getElementById('activity-count');
-  count.textContent = `${logs.length} message${logs.length!==1?'s':''}`;
-  if (!logs.length) { el.innerHTML = '<div class="activity-empty">No messages to show.</div>'; return; }
-  el.innerHTML = [...logs].reverse().map(l => buildActivityItem(l)).join('');
-}
-
-function buildActivityItem(l) {
-  const dir  = l.direction || 'in';
-  const icon = dir === 'in' ? '↑' : '↓';
-  const body = (l.body || '').substring(0, 80) + ((l.body||'').length > 80 ? '…' : '');
-  const from = (l.from || '').replace('@lid','').replace('@c.us','').substring(0,16);
-  const time = l.timestamp ? new Date(l.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
-  return `<div class="activity-item">
-    <div class="activity-dir ${dir}">${icon}</div>
-    <div class="activity-body">
-      <div class="activity-who">${from || 'unknown'} · ${dir === 'in' ? 'Incoming' : 'Bot reply'}</div>
-      <div class="activity-text">${body.replace(/</g,'&lt;') || '<em style="color:var(--text-lt)">[empty]</em>'}</div>
-    </div>
-    <div class="activity-time">${time}</div>
-  </div>`;
-}
-
-// ── PROMPT SETTINGS (#17) ──
-async function loadPrompt() {
-  const el = document.getElementById('prompt-editor');
-  try {
-    const res  = await fetch('/dashboard/api/prompt');
-    if (res.ok) {
-      const data = await res.json();
-      el.value = data.prompt || '';
-    } else {
-      // Fallback: show placeholder if endpoint doesn't exist yet
-      el.value = '(Prompt editor — connect /api/prompt endpoint to enable editing)';
-    }
-  } catch {
-    el.value = '(Unable to load prompt — make sure /dashboard/api/prompt is available)';
-  }
-  updatePromptStats();
-}
-
-function updatePromptStats() {
-  const val = document.getElementById('prompt-editor').value;
-  document.getElementById('prompt-chars').textContent  = val.length.toLocaleString();
-  document.getElementById('prompt-words').textContent  = val.trim().split(/\s+/).filter(Boolean).length.toLocaleString();
-  document.getElementById('prompt-tokens').textContent = Math.ceil(val.length / 4).toLocaleString();
-}
-
-document.getElementById('prompt-editor').addEventListener('input', updatePromptStats);
-
-async function savePrompt() {
-  const prompt = document.getElementById('prompt-editor').value;
-  const msg    = document.getElementById('prompt-msg');
-  try {
-    const res = await fetch('/dashboard/api/prompt', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt })
-    });
-    if (res.ok) {
-      msg.textContent = '✓ Prompt saved.'; msg.className = 'msg ok';
-      toast('✓ Prompt updated — applies to new conversations immediately.');
-    } else {
-      msg.textContent = 'Save failed — /api/prompt endpoint needed.'; msg.className = 'msg err';
-    }
-  } catch { msg.textContent = 'Server error.'; msg.className = 'msg err'; }
-  setTimeout(() => msg.textContent = '', 4000);
-}
-
-function copyPrompt() {
-  navigator.clipboard.writeText(document.getElementById('prompt-editor').value)
-    .then(() => toast('✓ Prompt copied to clipboard.'))
-    .catch(() => toast('Copy failed.', true));
-}
-
-// ── DOCUMENT HISTORY (#18) ──
-async function loadDocuments() {
-  const el = document.getElementById('doc-history-list');
-  try {
-    // Try to list generated docs from the /api/download endpoint pattern
-    const res = await fetch('/dashboard/api/documents');
-    if (res.ok) {
-      const docs = await res.json();
-      renderDocuments(docs);
-    } else {
-      // Fallback: parse from logs
-      const logsRes = await fetch('/dashboard/api/logs');
-      const logs    = logsRes.ok ? await logsRes.json() : [];
-      const docLogs = logs.filter(l =>
-        l.body && (l.body.includes('.docx') || l.body.includes('Generated document') || l.body.includes('Document generated'))
-      );
-      renderDocuments(docLogs.map(l => ({
-        title: l.body.replace('Document generated: ','').replace('Generated document: ','').split('.docx')[0] + '.docx',
-        timestamp: l.timestamp,
-        from: l.from,
-        downloadPath: null
-      })));
-    }
-  } catch(e) {
-    el.innerHTML = '<div class="activity-empty"><div class="doc-empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>Could not load document history.</div>';
-  }
-}
-
-function renderDocuments(docs) {
-  const el    = document.getElementById('doc-history-list');
-  const count = document.getElementById('doc-count');
-  count.textContent = `${docs.length} document${docs.length!==1?'s':''}`;
-  if (!docs.length) {
-    el.innerHTML = '<div class="doc-empty"><div class="doc-empty-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div>No documents generated yet.</div></div>';
-    return;
-  }
-  const docSvg = (color='#4a8c3f') => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
-  const typeIcon = t => {
-    if (!t) return docSvg();
-    const tl = t.toLowerCase();
-    if (tl.includes('exam'))   return docSvg('#c2410c');
-    if (tl.includes('quiz'))   return docSvg('#1d4ed8');
-    if (tl.includes('lesson')) return docSvg('#2d5a27');
-    if (tl.includes('letter') || tl.includes('circular')) return docSvg('#6d28d9');
-    return docSvg();
-  };
-  el.innerHTML = '<div class="doc-history-grid">' + [...docs].reverse().map(d => {
-    const title = d.title || d.filename || 'Document';
-    const time  = d.timestamp ? new Date(d.timestamp).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
-    const from  = d.from ? d.from.replace('@lid','').replace('@c.us','') : '';
-    const dlBtn = d.downloadPath
-      ? `<a href="/dashboard/api/download/${encodeURIComponent(d.downloadPath)}" class="btn btn-sm-green doc-dl" download>↓ Download</a>`
-      : `<span style="font-size:12px;color:var(--text-lt);">No link</span>`;
-    return `<div class="doc-item">
-      <div class="doc-icon">${typeIcon(title)}</div>
-      <div class="doc-info">
-        <div class="doc-title">${title.replace(/</g,'&lt;')}</div>
-        <div class="doc-meta">${time}${from ? ' · ' + from : ''}</div>
-      </div>
-      ${dlBtn}
-    </div>`;
-  }).join('') + '</div>';
-}
-
-// ── INIT ──
+drawTabs();
 loadOverview();
-loadKnowledge();
-renderQuickFields();
-// Auto-refresh overview every 60s
-setInterval(loadOverview, 60000);
 </script>
 </body>
 </html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Law of Reflection — Virtual Laboratory</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Space Grotesk', sans-serif; }
+
+  body {
+    background-color: #080c10;
+    background-image:
+      linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(0,212,255,0.3),
+                0 0 20px rgba(0,212,255,0.2),
+                0 0 40px rgba(0,212,255,0.1);
+  }
+
+  .neon-text {
+    text-shadow: 0 0 10px rgba(0,212,255,0.8),
+                 0 0 20px rgba(0,212,255,0.5),
+                 0 0 40px rgba(0,212,255,0.3);
+  }
+
+  .control-panel {
+    background: linear-gradient(135deg, rgba(15,25,35,0.95) 0%, rgba(8,12,16,0.98) 100%);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+
+  .slider-container input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #1a2a3a 0%, #2a3a4a 100%);
+    border-radius: 3px;
+    outline: none;
+  }
+
+  .slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,212,255,0.6);
+    transition: all 0.2s ease;
+  }
+
+  .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(0,212,255,0.8);
+  }
+
+  .data-value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #00d4ff 0%, #0088aa 100%);
+    transition: all 0.3s ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0,212,255,0.4);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+    border: 1px solid rgba(0,212,255,0.3);
+    transition: all 0.3s ease;
+  }
+  .btn-secondary:hover {
+    border-color: rgba(0,212,255,0.6);
+    box-shadow: 0 0 15px rgba(0,212,255,0.2);
+  }
+
+  .canvas-container {
+    background: linear-gradient(135deg, rgba(10,15,20,0.9) 0%, rgba(5,8,12,0.95) 100%);
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+
+  .angle-graph {
+    background: linear-gradient(180deg, rgba(10,15,20,0.95) 0%, rgba(5,8,12,0.98) 100%);
+    border: 1px solid rgba(0,212,255,0.15);
+  }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+  .pulse-slow { animation: pulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body class="min-h-screen text-gray-100 overflow-x-hidden">
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+
+  <!-- Header -->
+  <header class="text-center mb-6">
+    <h1 class="text-3xl md:text-4xl font-bold text-cyan-400 neon-text mb-2">
+      Law of Reflection — Virtual Laboratory
+    </h1>
+    <p class="text-gray-400 text-sm md:text-base">
+      Interactive simulation · Angle of Incidence = Angle of Reflection (θᵢ = θᵣ)
+    </p>
+  </header>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+
+    <!-- Left Control Panel -->
+    <div class="lg:w-80 flex-shrink-0">
+      <div class="control-panel rounded-xl p-5 neon-glow">
+
+        <h2 class="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+          </svg>
+          Experimental Controls
+        </h2>
+
+        <!-- Incident Angle Slider -->
+        <div class="slider-container mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-sm text-gray-300">Angle of Incidence (θᵢ)</label>
+            <span id="val-incident" class="data-value text-cyan-400 font-medium">45°</span>
+          </div>
+          <input type="range" id="sl-incident" min="0" max="89" step="1" value="45">
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>0° (Normal)</span><span>89° (Grazing)</span>
+          </div>
+        </div>
+
+        <!-- Mirror Tilt Slider -->
+        <div class="slider-container mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-sm text-gray-300">Mirror Tilt</label>
+            <span id="val-tilt" class="data-value text-cyan-400 font-medium">0°</span>
+          </div>
+          <input type="range" id="sl-tilt" min="-45" max="45" step="1" value="0">
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>-45°</span><span>+45°</span>
+          </div>
+        </div>
+
+        <!-- Surface Type -->
+        <div class="mb-6">
+          <label class="text-sm text-gray-300 block mb-2">Mirror Surface</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-specular" onclick="setSurface('specular')"
+              class="btn-primary py-2 px-3 rounded-lg text-sm font-medium text-gray-900">Specular</button>
+            <button id="btn-diffuse" onclick="setSurface('diffuse')"
+              class="btn-secondary py-2 px-3 rounded-lg text-sm font-medium text-gray-300">Diffuse</button>
+          </div>
+        </div>
+
+        <!-- Play / Reset -->
+        <div class="flex gap-3 mb-6">
+          <button id="playBtn" class="btn-primary flex-1 py-2.5 px-4 rounded-lg font-medium text-gray-900 flex items-center justify-center gap-2">
+            <svg id="playIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <span id="playText">Animate</span>
+          </button>
+          <button id="resetBtn" class="btn-secondary flex-1 py-2.5 px-4 rounded-lg font-medium text-gray-300 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Reset
+          </button>
+        </div>
+
+        <!-- Data Panel -->
+        <div class="border-t border-gray-700/50 pt-5">
+          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Measured Values
+          </h3>
+
+          <div class="space-y-3">
+            <div class="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Angle of Incidence</div>
+              <div id="disp-incident" class="data-value text-2xl font-bold text-amber-400">45°</div>
+            </div>
+            <div class="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Angle of Reflection</div>
+              <div id="disp-reflected" class="data-value text-2xl font-bold text-blue-400">45°</div>
+            </div>
+            <div class="bg-gray-800/30 rounded-lg p-3 border border-gray-700/30">
+              <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Law Verified</div>
+              <div id="disp-law" class="data-value text-xl font-bold text-emerald-400">θᵢ = θᵣ ✓</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Physics Info -->
+        <div class="border-t border-gray-700/50 pt-5 mt-5">
+          <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Physics Equation</h3>
+          <div class="bg-gray-900/50 rounded-lg p-3 text-center border border-gray-700/30">
+            <div class="text-cyan-400 font-mono text-lg">θᵢ = θᵣ</div>
+            <div class="text-gray-500 text-xs mt-2">
+              Angles measured from the Normal to the surface
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-3 mt-3 border border-gray-700/30 text-xs text-gray-400 leading-relaxed">
+            <span class="text-amber-400 font-semibold">Incident ray</span> — travels toward mirror<br>
+            <span class="text-white/50">Normal</span> — perpendicular to mirror surface<br>
+            <span class="text-blue-400 font-semibold">Reflected ray</span> — bounces off mirror
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: Canvas + Polar -->
+    <div class="flex-1 flex flex-col gap-4">
+
+      <!-- Main Simulation -->
+      <div class="canvas-container rounded-xl p-4 neon-glow">
+        <canvas id="mainCanvas" class="w-full rounded-lg" style="height:400px;"></canvas>
+      </div>
+
+      <!-- Polar / Angle Summary Graph -->
+      <div class="angle-graph rounded-xl p-4">
+        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+          </svg>
+          Angle Comparison
+        </h3>
+        <canvas id="polarCanvas" class="w-full rounded-lg" style="height:160px;"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="mt-6 text-center text-gray-500 text-sm">
+    <p>Drag the slider or click <strong class="text-cyan-500">Animate</strong> to sweep the incident angle automatically.</p>
+    <p class="mt-1">Switch between <strong class="text-cyan-500">Specular</strong> (mirror-like) and <strong class="text-cyan-500">Diffuse</strong> (scattered) reflection.</p>
+  </footer>
+
+</div>
+
+<script>
+// ================================================
+// Law of Reflection — Virtual Laboratory
+// ================================================
+
+const mainCanvas  = document.getElementById('mainCanvas');
+const polarCanvas = document.getElementById('polarCanvas');
+const mCtx = mainCanvas.getContext('2d');
+const pCtx = polarCanvas.getContext('2d');
+
+// --- State ---
+let incidentAngleDeg = 45;   // from normal
+let mirrorTiltDeg    = 0;
+let surface          = 'specular';  // 'specular' | 'diffuse'
+let isPlaying        = false;
+let animId           = null;
+let animDir          = 1;
+let animAngle        = 45;
+let pulseT           = 0;
+
+// --- Sliders ---
+const slInc  = document.getElementById('sl-incident');
+const slTilt = document.getElementById('sl-tilt');
+
+slInc.addEventListener('input', e => {
+  incidentAngleDeg = parseInt(e.target.value);
+  document.getElementById('val-incident').textContent = incidentAngleDeg + '°';
+  if (!isPlaying) render();
+});
+
+slTilt.addEventListener('input', e => {
+  mirrorTiltDeg = parseInt(e.target.value);
+  document.getElementById('val-tilt').textContent = mirrorTiltDeg + '°';
+  if (!isPlaying) render();
+});
+
+document.getElementById('playBtn').addEventListener('click', togglePlay);
+document.getElementById('resetBtn').addEventListener('click', doReset);
+window.addEventListener('resize', () => { resizeCanvases(); render(); });
+
+// --- Surface buttons ---
+function setSurface(s) {
+  surface = s;
+  document.getElementById('btn-specular').className = s === 'specular'
+    ? 'btn-primary py-2 px-3 rounded-lg text-sm font-medium text-gray-900'
+    : 'btn-secondary py-2 px-3 rounded-lg text-sm font-medium text-gray-300';
+  document.getElementById('btn-diffuse').className = s === 'diffuse'
+    ? 'btn-primary py-2 px-3 rounded-lg text-sm font-medium text-gray-900'
+    : 'btn-secondary py-2 px-3 rounded-lg text-sm font-medium text-gray-300';
+  if (!isPlaying) render();
+}
+
+// --- Resize ---
+function resizeCanvases() {
+  const dpr = window.devicePixelRatio || 1;
+
+  const mr = mainCanvas.getBoundingClientRect();
+  mainCanvas.width  = mr.width  * dpr;
+  mainCanvas.height = mr.height * dpr;
+  mCtx.scale(dpr, dpr);
+
+  const pr = polarCanvas.getBoundingClientRect();
+  polarCanvas.width  = pr.width  * dpr;
+  polarCanvas.height = pr.height * dpr;
+  pCtx.scale(dpr, dpr);
+}
+
+// --- Helpers ---
+function toRad(d) { return d * Math.PI / 180; }
+function toDeg(r) { return r * 180 / Math.PI; }
+
+// --- Main draw ---
+function drawMain() {
+  const W = mainCanvas.getBoundingClientRect().width;
+  const H = mainCanvas.getBoundingClientRect().height;
+
+  mCtx.fillStyle = '#080c10';
+  mCtx.fillRect(0, 0, W, H);
+
+  // Grid
+  mCtx.strokeStyle = 'rgba(30,58,95,0.1)';
+  mCtx.lineWidth = 1;
+  for (let x = 0; x < W; x += 30) { mCtx.beginPath(); mCtx.moveTo(x,0); mCtx.lineTo(x,H); mCtx.stroke(); }
+  for (let y = 0; y < H; y += 30) { mCtx.beginPath(); mCtx.moveTo(0,y); mCtx.lineTo(W,y); mCtx.stroke(); }
+
+  // Hit point = center
+  const HX = W / 2, HY = H / 2;
+  const RAY  = Math.min(W, H) * 0.42;
+  const NORM = Math.min(W, H) * 0.30;
+
+  // Mirror orientation
+  const tiltRad  = toRad(mirrorTiltDeg);
+  // Mirror tangent direction
+  const mTx = Math.cos(tiltRad), mTy = Math.sin(tiltRad);
+  // Mirror normal (perpendicular, pointing upward)
+  let nx = -mTy, ny = mTx;
+
+  // Incident direction from source to hit point
+  // We place the source at angle (incidentAngleDeg) from normal, on the left side
+  const incRad = toRad(incidentAngleDeg);
+  // Incident ray direction (toward mirror)
+  // angle from normal: source is on the side the normal points
+  // rotated incidentAngle from the normal direction (toward mirror)
+  const normAngle = Math.atan2(ny, nx);  // normal points from mirror toward source side
+  const srcAngle  = normAngle + Math.PI + incRad; // source is opposite normal, offset by incAngle
+  const incDX = Math.cos(srcAngle - Math.PI);  // direction FROM source TO hit
+  const incDY = Math.sin(srcAngle - Math.PI);
+
+  // Source position
+  const srcX = HX - incDX * RAY;
+  const srcY = HY - incDY * RAY;
+
+  // Reflected direction: r = d - 2(d·n)n
+  const dot = incDX * nx + incDY * ny;
+  const refDX = incDX - 2 * dot * nx;
+  const refDY = incDY - 2 * dot * ny;
+
+  // === Draw mirror ===
+  const ML = Math.min(W, H) * 0.48;
+  const ax = HX - mTx * ML / 2, ay = HY - mTy * ML / 2;
+  const bx = HX + mTx * ML / 2, by = HY + mTy * ML / 2;
+
+  // Hatch marks (back of mirror)
+  mCtx.save();
+  mCtx.strokeStyle = '#0d4a3a';
+  mCtx.lineWidth = 1.5;
+  const hatchCount = 12;
+  for (let i = 0; i <= hatchCount; i++) {
+    const t = i / hatchCount;
+    const hx = ax + t * (bx - ax), hy = ay + t * (by - ay);
+    // hatch goes into the "back" (opposite to normal)
+    mCtx.beginPath();
+    mCtx.moveTo(hx, hy);
+    mCtx.lineTo(hx + nx * 12, hy + ny * 12);
+    mCtx.stroke();
+  }
+  // Mirror surface line
+  mCtx.strokeStyle = '#1fc99a';
+  mCtx.lineWidth = 4;
+  mCtx.lineCap = 'round';
+  mCtx.shadowColor = '#1fc99a';
+  mCtx.shadowBlur = 12;
+  mCtx.beginPath();
+  mCtx.moveTo(ax, ay);
+  mCtx.lineTo(bx, by);
+  mCtx.stroke();
+  mCtx.restore();
+
+  // === Normal line (dashed) ===
+  mCtx.save();
+  mCtx.setLineDash([8, 6]);
+  mCtx.strokeStyle = 'rgba(255,255,255,0.22)';
+  mCtx.lineWidth = 1.5;
+  mCtx.beginPath();
+  mCtx.moveTo(HX - nx * NORM, HY - ny * NORM);
+  mCtx.lineTo(HX + nx * NORM, HY + ny * NORM);
+  mCtx.stroke();
+  mCtx.setLineDash([]);
+  // "N" label at top of normal
+  mCtx.fillStyle = 'rgba(255,255,255,0.4)';
+  mCtx.font = '11px Space Grotesk';
+  mCtx.textAlign = 'center';
+  mCtx.fillText('Normal', HX - nx * (NORM + 16), HY - ny * (NORM + 16));
+  mCtx.restore();
+
+  // === Incident ray ===
+  mCtx.save();
+  mCtx.strokeStyle = '#f59e0b';
+  mCtx.lineWidth = 3;
+  mCtx.lineCap = 'round';
+  mCtx.shadowColor = '#f59e0b';
+  mCtx.shadowBlur = 14;
+  mCtx.beginPath();
+  mCtx.moveTo(srcX, srcY);
+  mCtx.lineTo(HX, HY);
+  mCtx.stroke();
+  // Arrow midpoint
+  drawArrow(mCtx, srcX + (HX - srcX) * 0.55, srcY + (HY - srcY) * 0.55, incDX, incDY, '#f59e0b');
+  mCtx.restore();
+
+  // === Reflected ray (specular) or diffuse scatter ===
+  if (surface === 'specular') {
+    mCtx.save();
+    mCtx.strokeStyle = '#60a5fa';
+    mCtx.lineWidth = 3;
+    mCtx.lineCap = 'round';
+    mCtx.shadowColor = '#60a5fa';
+    mCtx.shadowBlur = 14;
+    mCtx.beginPath();
+    mCtx.moveTo(HX, HY);
+    mCtx.lineTo(HX + refDX * RAY, HY + refDY * RAY);
+    mCtx.stroke();
+    drawArrow(mCtx, HX + refDX * RAY * 0.55, HY + refDY * RAY * 0.55, refDX, refDY, '#60a5fa');
+    mCtx.restore();
+  } else {
+    // Diffuse: scatter rays in hemisphere around normal
+    const numRays = 9;
+    for (let i = 0; i < numRays; i++) {
+      const spread = toRad(-80 + i * (160 / (numRays - 1)));
+      const dRad = normAngle + spread;
+      // only if on the correct side (dot product with normal positive)
+      const ddx = Math.cos(dRad), ddy = Math.sin(dRad);
+      if (ddx * nx + ddy * ny > 0) {
+        const alpha = 0.2 + 0.5 * Math.pow(Math.cos(spread), 2);
+        mCtx.save();
+        mCtx.globalAlpha = alpha;
+        mCtx.strokeStyle = '#60a5fa';
+        mCtx.lineWidth = 1.5;
+        mCtx.shadowColor = '#60a5fa';
+        mCtx.shadowBlur = 6;
+        mCtx.beginPath();
+        mCtx.moveTo(HX, HY);
+        mCtx.lineTo(HX + ddx * RAY * 0.7, HY + ddy * RAY * 0.7);
+        mCtx.stroke();
+        mCtx.restore();
+      }
+    }
+  }
+
+  // === Angle arcs & labels ===
+  const ARC_R = 52;
+
+  // Incident angle arc (between reversed incident ray and normal)
+  const incDirAngle = Math.atan2(incDY, incDX); // direction FROM source TO hit
+  const normUp = normAngle; // normal pointing away from mirror toward source side
+
+  // We want arc from normal (pointing toward source side) to incident ray direction reversed
+  // Source side normal angle:
+  const srcNormAngle = normAngle; // normal toward source side (nx, ny already pointing that way if source is on that side)
+
+  // Incident angle arc: from (normAngle) sweeping to (incDirAngle + π) (reversed incident)
+  const incRevAngle = Math.atan2(-incDY, -incDX); // reversed = from hit toward source
+
+  mCtx.save();
+  mCtx.strokeStyle = 'rgba(245,158,11,0.7)';
+  mCtx.lineWidth = 1.8;
+  mCtx.beginPath();
+  // arc from srcNormAngle to incRevAngle
+  let a1 = srcNormAngle, a2 = incRevAngle;
+  mCtx.arc(HX, HY, ARC_R, Math.min(a1,a2), Math.max(a1,a2));
+  mCtx.stroke();
+  // label
+  const incMid = (a1 + a2) / 2;
+  mCtx.fillStyle = '#f59e0b';
+  mCtx.font = 'bold 13px Space Grotesk';
+  mCtx.textAlign = 'center';
+  mCtx.fillText('θᵢ', HX + (ARC_R + 18) * Math.cos(incMid), HY + (ARC_R + 18) * Math.sin(incMid));
+  mCtx.restore();
+
+  // Reflected angle arc (between normal and reflected ray)
+  const refDirAngle = Math.atan2(refDY, refDX);
+  mCtx.save();
+  mCtx.strokeStyle = 'rgba(96,165,250,0.7)';
+  mCtx.lineWidth = 1.8;
+  mCtx.beginPath();
+  let b1 = srcNormAngle, b2 = refDirAngle;
+  mCtx.arc(HX, HY, ARC_R + 8, Math.min(b1,b2), Math.max(b1,b2));
+  mCtx.stroke();
+  const refMid = (b1 + b2) / 2;
+  mCtx.fillStyle = '#60a5fa';
+  mCtx.font = 'bold 13px Space Grotesk';
+  mCtx.textAlign = 'center';
+  mCtx.fillText('θᵣ', HX + (ARC_R + 28) * Math.cos(refMid), HY + (ARC_R + 28) * Math.sin(refMid));
+  mCtx.restore();
+
+  // === Source glow ===
+  const sg = mCtx.createRadialGradient(srcX, srcY, 2, srcX, srcY, 30);
+  sg.addColorStop(0, 'rgba(255,248,180,1)');
+  sg.addColorStop(0.3, 'rgba(245,158,11,0.6)');
+  sg.addColorStop(1, 'transparent');
+  mCtx.fillStyle = sg;
+  mCtx.beginPath();
+  mCtx.arc(srcX, srcY, 30, 0, Math.PI * 2);
+  mCtx.fill();
+
+  mCtx.save();
+  mCtx.fillStyle = '#ffffff';
+  mCtx.shadowColor = '#f59e0b';
+  mCtx.shadowBlur = 18;
+  mCtx.beginPath();
+  mCtx.arc(srcX, srcY, 7, 0, Math.PI * 2);
+  mCtx.fill();
+  mCtx.restore();
+
+  // Hit point glow
+  const hg = mCtx.createRadialGradient(HX, HY, 0, HX, HY, 18);
+  hg.addColorStop(0, 'rgba(31,201,154,0.9)');
+  hg.addColorStop(1, 'transparent');
+  mCtx.fillStyle = hg;
+  mCtx.beginPath();
+  mCtx.arc(HX, HY, 18, 0, Math.PI * 2);
+  mCtx.fill();
+
+  // === Labels ===
+  mCtx.save();
+  mCtx.font = '11px Space Grotesk';
+  mCtx.fillStyle = 'rgba(245,158,11,0.75)';
+  mCtx.textAlign = 'center';
+  mCtx.fillText('Light Source', srcX, srcY + 22);
+
+  mCtx.fillStyle = 'rgba(31,201,154,0.75)';
+  mCtx.fillText('Mirror', HX + mTx * ML / 2 + 30, HY + mTy * ML / 2 + 4);
+
+  mCtx.fillStyle = 'rgba(96,165,250,0.75)';
+  const refEndX = HX + refDX * RAY, refEndY = HY + refDY * RAY;
+  mCtx.fillText('Reflected', refEndX, refEndY + (refDY > 0 ? 16 : -8));
+  mCtx.restore();
+
+  // === Update data cards ===
+  const reflDeg = incidentAngleDeg; // always equal
+  document.getElementById('disp-incident').textContent = incidentAngleDeg + '°';
+  document.getElementById('disp-reflected').textContent = reflDeg + '°';
+  document.getElementById('disp-law').textContent = incidentAngleDeg === reflDeg ? 'θᵢ = θᵣ ✓' : 'θᵢ ≠ θᵣ ✗';
+}
+
+// --- Polar / angle comparison graph ---
+function drawPolar() {
+  const W = polarCanvas.getBoundingClientRect().width;
+  const H = polarCanvas.getBoundingClientRect().height;
+
+  pCtx.fillStyle = '#0a0f14';
+  pCtx.fillRect(0, 0, W, H);
+
+  const pad = { left: 50, right: 20, top: 20, bottom: 35 };
+  const gW = W - pad.left - pad.right;
+  const gH = H - pad.top - pad.bottom;
+
+  // Grid
+  pCtx.strokeStyle = 'rgba(30,58,95,0.2)';
+  pCtx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + gH * i / 4;
+    pCtx.beginPath(); pCtx.moveTo(pad.left, y); pCtx.lineTo(W - pad.right, y); pCtx.stroke();
+  }
+
+  // Axes
+  pCtx.strokeStyle = 'rgba(0,212,255,0.5)';
+  pCtx.lineWidth = 1;
+  pCtx.beginPath(); pCtx.moveTo(pad.left, pad.top); pCtx.lineTo(pad.left, H - pad.bottom); pCtx.stroke();
+  pCtx.beginPath(); pCtx.moveTo(pad.left, H - pad.bottom); pCtx.lineTo(W - pad.right, H - pad.bottom); pCtx.stroke();
+
+  // Labels
+  pCtx.fillStyle = 'rgba(0,212,255,0.7)';
+  pCtx.font = '10px Space Grotesk';
+  pCtx.textAlign = 'right';
+  ['90°','67°','45°','22°','0°'].forEach((lbl, i) => {
+    pCtx.fillText(lbl, pad.left - 5, pad.top + gH * i / 4 + 4);
+  });
+  pCtx.textAlign = 'center';
+  pCtx.fillText('Incident Angle (swept 0→89°)', pad.left + gW / 2, H - 4);
+
+  // Incident angle line (always y = x, diagonal)
+  pCtx.beginPath();
+  pCtx.moveTo(pad.left, H - pad.bottom);
+  pCtx.lineTo(W - pad.right, pad.top + gH * (1 - 89 / 90));
+  pCtx.strokeStyle = 'rgba(245,158,11,0.5)';
+  pCtx.lineWidth = 1.5;
+  pCtx.setLineDash([4, 4]);
+  pCtx.stroke();
+  pCtx.setLineDash([]);
+
+  // Reflected = incident (same line, just colored blue)
+  pCtx.beginPath();
+  pCtx.moveTo(pad.left, H - pad.bottom);
+  pCtx.lineTo(W - pad.right, pad.top + gH * (1 - 89 / 90));
+  pCtx.strokeStyle = 'rgba(96,165,250,0.5)';
+  pCtx.lineWidth = 3;
+  pCtx.stroke();
+
+  // Current angle marker
+  const cx = pad.left + gW * incidentAngleDeg / 90;
+  const cy = H - pad.bottom - gH * incidentAngleDeg / 90;
+
+  // Vertical line at current
+  pCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+  pCtx.lineWidth = 1;
+  pCtx.setLineDash([3, 3]);
+  pCtx.beginPath(); pCtx.moveTo(cx, pad.top); pCtx.lineTo(cx, H - pad.bottom); pCtx.stroke();
+  pCtx.setLineDash([]);
+
+  // Incident dot
+  pCtx.save();
+  pCtx.fillStyle = '#f59e0b';
+  pCtx.shadowColor = '#f59e0b';
+  pCtx.shadowBlur = 10;
+  pCtx.beginPath(); pCtx.arc(cx, cy, 6, 0, Math.PI * 2); pCtx.fill();
+  pCtx.restore();
+
+  // Reflected dot (same position since θr = θi)
+  pCtx.save();
+  pCtx.fillStyle = '#60a5fa';
+  pCtx.shadowColor = '#60a5fa';
+  pCtx.shadowBlur = 10;
+  pCtx.beginPath(); pCtx.arc(cx, cy, 3, 0, Math.PI * 2); pCtx.fill();
+  pCtx.restore();
+
+  // Legend
+  pCtx.font = '10px Space Grotesk';
+  pCtx.textAlign = 'left';
+  pCtx.fillStyle = '#f59e0b'; pCtx.fillText('● Incident (θᵢ)', pad.left + 8, pad.top + 16);
+  pCtx.fillStyle = '#60a5fa'; pCtx.fillText('● Reflected (θᵣ)', pad.left + 110, pad.top + 16);
+  pCtx.fillStyle = 'rgba(255,255,255,0.4)'; pCtx.fillText('(lines overlap — law confirmed)', pad.left + 220, pad.top + 16);
+}
+
+function drawArrow(ctx, x, y, dx, dy, color) {
+  const size = 11;
+  const angle = Math.atan2(dy, dx);
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(size, 0);
+  ctx.lineTo(-size * 0.55, size * 0.38);
+  ctx.lineTo(-size * 0.55, -size * 0.38);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function render() {
+  drawMain();
+  drawPolar();
+}
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  const icon = document.getElementById('playIcon');
+  const txt  = document.getElementById('playText');
+
+  if (isPlaying) {
+    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    txt.textContent = 'Pause';
+    animAngle = incidentAngleDeg;
+    animLoop();
+  } else {
+    icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    txt.textContent = 'Animate';
+    if (animId) cancelAnimationFrame(animId);
+  }
+}
+
+function animLoop() {
+  if (!isPlaying) return;
+
+  animAngle += 0.4 * animDir;
+  if (animAngle >= 89) { animAngle = 89; animDir = -1; }
+  if (animAngle <= 0)  { animAngle = 0;  animDir =  1; }
+
+  incidentAngleDeg = Math.round(animAngle);
+  slInc.value = incidentAngleDeg;
+  document.getElementById('val-incident').textContent = incidentAngleDeg + '°';
+
+  render();
+  animId = requestAnimationFrame(animLoop);
+}
+
+function doReset() {
+  isPlaying = false;
+  if (animId) cancelAnimationFrame(animId);
+  document.getElementById('playIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+  document.getElementById('playText').textContent = 'Animate';
+
+  incidentAngleDeg = 45;
+  mirrorTiltDeg    = 0;
+  surface          = 'specular';
+  slInc.value  = 45;
+  slTilt.value = 0;
+  document.getElementById('val-incident').textContent = '45°';
+  document.getElementById('val-tilt').textContent = '0°';
+  setSurface('specular');
+  render();
+}
+
+// --- Init ---
+resizeCanvases();
+render();
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ const { getLogs } = require('../core/logger');
 const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
+const { saveToken, getToken, sendPushNotification, getAllTokens } = require('./push');
 
 const KNOWLEDGE_DIR = path.join(__dirname, '..', 'knowledge');
 
@@ -109,10 +110,18 @@ router.delete('/api/users/:code', (req, res) => {
   }
 });
 
+// Allowed models (validated server-side)
+const ALLOWED_MODELS = {
+  auto:   'claude-sonnet-4-6',
+  haiku:  'claude-haiku-4-5-20251001',
+  sonnet: 'claude-sonnet-4-6',
+};
+
 // Claude API proxy
 router.post('/api/chat', async (req, res) => {
   try {
-    const { messages, system } = req.body;
+    const { messages, system, model: clientModel } = req.body;
+    const resolvedModel = ALLOWED_MODELS[clientModel] || ALLOWED_MODELS.auto;
     const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -122,7 +131,7 @@ router.post('/api/chat', async (req, res) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: resolvedModel,
         max_tokens: 4000,
         system,
         messages
@@ -138,7 +147,8 @@ router.post('/api/chat', async (req, res) => {
 // ── Streaming Claude API ────────────────────────────────────────────────────
 router.post('/api/chat-stream', async (req, res) => {
   try {
-    const { messages, system } = req.body;
+    const { messages, system, model: clientModel } = req.body;
+    const resolvedModel = ALLOWED_MODELS[clientModel] || ALLOWED_MODELS.auto;
     const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -149,7 +159,7 @@ router.post('/api/chat-stream', async (req, res) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: resolvedModel,
         max_tokens: 2000,
         stream: true,
         system,
@@ -273,18 +283,82 @@ const { generateDocument } = require('../core/document-generator');
 const GENERATED_DIR = require('path').join(__dirname, '..', 'generated_docs');
 if (!fs.existsSync(GENERATED_DIR)) fs.mkdirSync(GENERATED_DIR, { recursive: true });
 
+// POST /api/push-register — save the device's Expo push token
+router.post('/api/push-register', (req, res) => {
+  const { getSession } = require('./auth');
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Missing token' });
+  saveToken(req.headers['x-auth-code'] || session.code, token);
+  res.json({ ok: true });
+});
+
+// ── Admin helper ───────────────────────────────────────────────────────────────
+function requireAdminAccess(req, res, next) {
+  const { getSession, hasAdminPanelAccess } = require('./auth');
+  const session = getSession(req);
+  if (session && (session.admin_access || (hasAdminPanelAccess && hasAdminPanelAccess(session)))) return next();
+  return res.status(session ? 403 : 401).json({ error: session ? 'IT access required' : 'Authentication required' });
+}
+
+// POST /api/admin/send-notification — send push notification to staff
+router.post('/api/admin/send-notification', requireAdminAccess, async (req, res) => {
+  const { title, body, target, authCodes } = req.body;
+  if (!title?.trim() || !body?.trim()) return res.status(400).json({ error: 'Title and body are required' });
+
+  const allTokens = getAllTokens(); // { authCode: token }
+  let targets = [];
+
+  if (target === 'all') {
+    targets = Object.values(allTokens).filter(Boolean);
+  } else if (target === 'specific' && Array.isArray(authCodes)) {
+    targets = authCodes.map(c => allTokens[c]).filter(Boolean);
+  }
+
+  if (targets.length === 0) return res.status(400).json({ error: 'No registered devices found for target' });
+
+  let sent = 0, failed = 0;
+  for (const token of targets) {
+    try {
+      await sendPushNotification(token, title.trim(), body.trim(), { source: 'admin' });
+      sent++;
+    } catch (_) { failed++; }
+  }
+
+  res.json({ ok: true, sent, failed, total: targets.length });
+});
+
+// GET /api/admin/push-tokens — list registered devices with count
+router.get('/api/admin/push-tokens', requireAdminAccess, (req, res) => {
+  const tokens = getAllTokens();
+  const list = Object.entries(tokens).map(([code, token]) => ({ code, hasToken: !!token }));
+  res.json({ count: list.length, devices: list });
+});
+
 // POST /api/generate — build a .docx from Claude's documentSpec
 router.post('/api/generate', async (req, res) => {
   try {
     const { documentSpec } = req.body;
     if (!documentSpec) return res.status(400).json({ error: 'Missing documentSpec' });
     const result = await generateDocument(documentSpec);
+    const docTitle = documentSpec.title || 'Document';
+
+    // Fire push notification to the requesting device (non-blocking)
+    const pushToken = getToken(req.headers['x-auth-code']);
+    sendPushNotification(
+      pushToken,
+      '📄 Document Ready',
+      `"${docTitle}" has been generated and is ready to download.`,
+      { filename: result.filename }
+    );
+
     res.json({
       success:      true,
       filename:     result.filename,
       downloadPath: result.downloadPath,
-      title:        documentSpec.title || 'Document',
-      preview:      result.preview || null,   // #31: metadata for chat.html
+      title:        docTitle,
+      preview:      result.preview || null,
     });
   } catch (err) {
     console.error('[/api/generate]', err);
@@ -366,7 +440,7 @@ LETTER / CIRCULAR:
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: docSystem,
         messages: [{ role: 'user', content: userRequest }]
@@ -385,6 +459,70 @@ LETTER / CIRCULAR:
   } catch (err) {
     console.error('[/api/generate-from-prompt]', err);
     res.status(500).json({ error: 'Document generation failed', detail: err.message });
+  }
+});
+
+// ── Staff Directory ────────────────────────────────────────────────────────
+router.get('/api/staff', (req, res) => {
+  try {
+    const { getSession } = require('./auth');
+    if (!getSession(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const { db } = require('../core/database');
+
+    const staff = db.prepare(`
+      SELECT
+        p.id,
+        p.full_name,
+        p.title,
+        p.email,
+        p.status,
+        p.american_program,
+        r.role_type,
+        pr.employment_type,
+        pr.days,
+        pr.arrival_time,
+        pr.departure_time,
+        GROUP_CONCAT(DISTINCT d.name ORDER BY d.name) AS departments
+      FROM people p
+      LEFT JOIN roles r         ON r.person_id = p.id AND r.is_primary = 1
+      LEFT JOIN presence pr     ON pr.person_id = p.id
+      LEFT JOIN person_departments pd ON pd.person_id = p.id
+      LEFT JOIN departments d   ON d.id = pd.dept_id
+      WHERE p.status = 'active'
+      GROUP BY p.id
+      ORDER BY p.full_name
+    `).all();
+
+    res.json(staff.map(s => ({
+      ...s,
+      departments: s.departments ? s.departments.split(',') : [],
+    })));
+  } catch (err) {
+    console.error('[/api/staff]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/api/staff/:id/schedule', (req, res) => {
+  try {
+    const { getSession } = require('./auth');
+    if (!getSession(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const { db } = require('../core/database');
+
+    const schedule = db.prepare(`
+      SELECT day, period, class_name, notes
+      FROM schedules_v2
+      WHERE person_id = ?
+      ORDER BY
+        CASE day WHEN 'Mon' THEN 1 WHEN 'Tue' THEN 2 WHEN 'Wed' THEN 3
+                 WHEN 'Thu' THEN 4 WHEN 'Fri' THEN 5 ELSE 6 END,
+        period
+    `).all(req.params.id);
+
+    res.json(schedule);
+  } catch (err) {
+    console.error('[/api/staff/:id/schedule]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -447,6 +585,18 @@ router.post('/api/prompt', (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Reload knowledge base (admin) ───────────────────────────────────────────
+router.post('/api/reload-kb', (req, res) => {
+  // Knowledge base is loaded fresh on each query; this confirms the intent
+  res.json({ ok: true, message: 'Knowledge base will reload on next query.' });
+});
+
+// ── Active sessions (admin) ─────────────────────────────────────────────────
+router.get('/api/sessions', (req, res) => {
+  // Session store is in-memory JWT; no persistent session list available
+  res.json([]);
 });
 
 module.exports = router;

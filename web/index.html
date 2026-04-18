@@ -1,90 +1,542 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>WhatsApp AI Bot — Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHS.ai | Operations Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0a0f0d; color: #d4edd9; font-family: monospace; }
-  header { padding: 20px 32px; border-bottom: 1px solid #1e2e24; display: flex; align-items: center; justify-content: space-between; background: #0d1f14; }
-  .logo { font-size: 20px; font-weight: bold; color: #25d366; }
-  .logo span { color: #aaa; font-size: 13px; margin-left: 10px; }
-  #status-badge { padding: 6px 14px; border-radius: 999px; border: 1px solid #1e2e24; font-size: 12px; display: flex; align-items: center; gap: 8px; }
-  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffd166; animation: pulse 2s infinite; }
-  #status-dot.ready { background: #25d366; animation: none; }
-  #status-dot.error { background: #ff4d6d; animation: none; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  main { display: grid; grid-template-columns: 1fr; height: calc(100vh - 65px); }
-  .log-header { padding: 16px 32px; border-bottom: 1px solid #1e2e24; display: flex; justify-content: space-between; align-items: center; }
-  #clear-btn { padding: 6px 14px; background: transparent; border: 1px solid #1e2e24; border-radius: 6px; color: #aaa; cursor: pointer; font-family: monospace; }
-  #clear-btn:hover { border-color: #ff4d6d; color: #ff4d6d; }
-  #log-list { padding: 20px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; height: calc(100vh - 120px); }
-  .msg-entry { display: flex; flex-direction: column; gap: 4px; animation: slideIn 0.2s ease; }
-  @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  .msg-entry.in { align-items: flex-start; }
-  .msg-entry.out { align-items: flex-end; }
-  .msg-bubble { max-width: 60%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .msg-entry.in .msg-bubble { background: #0d2218; border: 1px solid #1e3828; border-bottom-left-radius: 4px; }
-  .msg-entry.out .msg-bubble { background: #1a9e4a; border: 1px solid #1a7a3a; border-bottom-right-radius: 4px; }
-  .msg-meta { font-size: 10px; color: #4a6655; display: flex; gap: 8px; padding: 0 4px; }
-  .dir-label { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; letter-spacing: 1px; }
-  .in .dir-label { background: #0d2a1a; color: #25d366; }
-  .out .dir-label { background: #1a2e20; color: #7dd8a0; }
-  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a6655; gap: 12px; }
-  .empty .icon { font-size: 48px; opacity: 0.4; }
+:root{
+  --bg:#e4f0e9;
+  --panel:#f2fbf6;
+  --panel-2:#e6f4ec;
+  --ink:#151515;
+  --muted:#665f54;
+  --line:rgba(21,21,21,.1);
+  --moss:#1B6358;
+  --moss-soft:#dff2e7;
+  --amber:#b56b28;
+  --amber-soft:#f9ead7;
+  --clay:#9b4832;
+  --clay-soft:#f8e2da;
+  --sky:#355d7a;
+  --sky-soft:#ddeaf3;
+  --shadow:0 30px 60px rgba(58,40,19,.12);
+  --radius:24px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Instrument Sans',sans-serif;
+  color:var(--ink);
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top left, rgba(27,99,88,.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(181,107,40,.14), transparent 24%),
+    linear-gradient(180deg, #eaf4ef 0%, #deeae5 100%);
+}
+a{color:inherit;text-decoration:none}
+button,input,select{font:inherit}
+.shell{width:min(1380px,calc(100vw - 32px));margin:0 auto}
+.topbar{
+  position:sticky;top:0;z-index:30;
+  backdrop-filter:blur(14px);
+  background:rgba(226,242,232,.9);
+  border-bottom:1px solid rgba(21,21,21,.06);
+}
+.topbar-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:18px;padding:16px 0;
+}
+.brand{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:1.2rem;font-weight:700;letter-spacing:-.04em;
+}
+.brand em{font-style:normal;color:var(--moss)}
+.brand-lockup{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand-mark{width:36px;height:36px;object-fit:contain;border-radius:4px}
+.brand-copy{display:flex;flex-direction:column;line-height:1;gap:2px}
+.brand-title{font-size:1rem;font-weight:700;color:var(--ink)}
+.brand-subtitle{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.nav{display:flex;gap:10px;flex-wrap:wrap}
+.nav a{
+  padding:10px 14px;border-radius:999px;color:var(--muted);
+  transition:.2s ease;background:transparent;
+}
+.nav a:hover,.nav a.active{background:rgba(21,21,21,.06);color:var(--ink)}
+.top-actions{display:flex;gap:10px;align-items:center}
+.button{
+  border:none;border-radius:999px;padding:11px 16px;cursor:pointer;
+  transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.button:hover{transform:translateY(-1px)}
+.button-primary{background:var(--ink);color:#fff;box-shadow:0 12px 22px rgba(21,21,21,.14)}
+.button-secondary{background:rgba(21,21,21,.06);color:var(--ink)}
+.hero{
+  padding:16px 0 14px;
+  display:grid;grid-template-columns:1.5fr 1fr;gap:14px;
+}
+.hero-main,.hero-side,.panel{
+  background:rgba(255,250,242,.78);
+  border:2px solid var(--moss);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.hero-main{
+  padding:18px 22px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#134d44,#1B6358) !important;
+  border-color:transparent !important;
+}
+.hero-main::after{
+  content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.08), transparent 70%);
+}
+.eyebrow{
+  font-size:.76rem;text-transform:uppercase;letter-spacing:.16em;
+  color:rgba(255,255,255,.55);margin-bottom:8px;
+}
+.hero-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(1.5rem,2.6vw,2.4rem);
+  line-height:1.05;letter-spacing:-.05em;max-width:18ch;
+  color:#fff;
+}
+.hero-copy{
+  margin-top:8px;max-width:58ch;color:rgba(255,255,255,.65);line-height:1.5;font-size:.88rem;
+}
+.hero-ribbon{
+  margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;
+}
+.ribbon-chip{
+  background:rgba(255,255,255,.12);padding:9px 12px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.15);
+  min-width:150px;
+}
+.ribbon-chip span{display:block;font-size:.78rem;color:rgba(255,255,255,.55);margin-bottom:4px}
+.ribbon-chip strong{font-size:1rem;font-weight:700;color:#fff}
+.hero-side{padding:14px 16px;display:grid;gap:10px}
+.status-card{
+  border-radius:16px;padding:12px 16px;background:linear-gradient(135deg,#134d44,#1B6358);color:#f7fbf8;
+}
+.status-card .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;opacity:.72}
+.status-card .value{font-size:1.9rem;font-family:'Space Grotesk',sans-serif;letter-spacing:-.05em;margin-top:12px}
+.status-card .sub{margin-top:8px;font-size:.94rem;opacity:.8}
+.mini-stack{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mini-card{
+  background:#fff;padding:10px 12px;border-radius:14px;border:1px solid rgba(21,21,21,.08)
+}
+.mini-card span{display:block;font-size:.72rem;color:var(--muted);margin-bottom:4px}
+.mini-card strong{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;letter-spacing:-.05em}
+.layout{
+  display:grid;grid-template-columns:1fr;gap:18px;padding-bottom:28px;
+}
+.two-col{
+  display:grid;grid-template-columns:1fr 1fr;gap:18px;
+}
+.paired-row{
+  align-items:start;
+}
+.paired-row .panel{
+  display:flex;flex-direction:column;
+}
+.scrollable-list{
+  max-height:320px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(21,21,21,.15) transparent;
+}
+.stack{display:grid;gap:18px}
+.panel{padding:22px}
+.panel-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px
+}
+.panel-title{
+  font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:-.04em
+}
+.panel-sub{margin-top:6px;color:var(--muted);line-height:1.5}
+.filter-row,.stat-row{
+  display:flex;gap:10px;flex-wrap:wrap
+}
+.pill{
+  border:none;border-radius:999px;padding:10px 14px;background:rgba(21,21,21,.06);cursor:pointer;color:var(--muted)
+}
+.pill.active{background:var(--ink);color:#fff}
+.board{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
+  max-height:580px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(21,21,21,.15) transparent;
+}
+.staff-card{
+  background:#fff;border:1px solid rgba(21,21,21,.08);border-radius:20px;padding:16px;display:grid;gap:12px;
+  transition:.2s ease;
+}
+.staff-card:hover{transform:translateY(-2px);box-shadow:0 20px 40px rgba(21,21,21,.08)}
+.staff-top{display:flex;justify-content:space-between;gap:12px}
+.staff-name{font-weight:700;font-size:1rem}
+.staff-meta{color:var(--muted);font-size:.9rem;margin-top:4px}
+.tag-row{display:flex;gap:8px;flex-wrap:wrap}
+.tag{
+  padding:7px 10px;border-radius:999px;font-size:.78rem;border:1px solid transparent
+}
+.tag.moss{background:var(--moss-soft);color:var(--moss)}
+.tag.amber{background:var(--amber-soft);color:var(--amber)}
+.tag.clay{background:var(--clay-soft);color:var(--clay)}
+.tag.sky{background:var(--sky-soft);color:var(--sky)}
+.tag.ghost{background:rgba(21,21,21,.05);color:var(--muted)}
+.staff-foot{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  color:var(--muted);font-size:.86rem
+}
+.metric-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
+}
+.metric{
+  background:#fff;padding:16px;border-radius:18px;border:1px solid rgba(21,21,21,.08)
+}
+.metric span{display:block;font-size:.82rem;color:var(--muted);margin-bottom:8px}
+.metric strong{font-size:1.4rem;font-family:'Space Grotesk',sans-serif}
+.list{
+  display:grid;gap:10px
+}
+.list-item{
+  background:#fff;border:1px solid rgba(21,21,21,.08);border-radius:18px;padding:14px 16px;display:flex;justify-content:space-between;gap:12px;align-items:center
+}
+.list-item strong{display:block}
+.list-item span{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}
+.field{
+  display:grid;gap:8px
+}
+.field label{
+  font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)
+}
+.field select,.field input{
+  width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(21,21,21,.1);
+  background:#fff;color:var(--ink);outline:none
+}
+.sub-candidates{display:grid;gap:10px}
+.candidate{
+  padding:12px 14px;border-radius:16px;background:var(--panel-2);display:flex;justify-content:space-between;gap:12px;align-items:center
+}
+.candidate small,.sub-note,.empty-state,.log-meta{color:var(--muted)}
+.empty-state{
+  padding:22px;border-radius:18px;background:rgba(21,21,21,.03);text-align:center;line-height:1.6
+}
+.log-list{display:grid;gap:10px}
+.log-item{
+  padding:14px 16px;border-radius:18px;background:#fff;border:1px solid rgba(21,21,21,.08)
+}
+.log-head{display:flex;justify-content:space-between;gap:12px;font-size:.82rem;color:var(--muted);margin-bottom:8px}
+.log-body{font-family:'IBM Plex Mono',monospace;font-size:.86rem;line-height:1.55;white-space:pre-wrap}
+.footer-note{
+  text-align:center;color:var(--muted);padding:0 0 30px;font-size:.9rem
+}
+@media (max-width: 1100px){
+  .hero,.layout{grid-template-columns:1fr}
+}
+@media (max-width: 760px){
+  .shell{width:min(100vw - 20px,1380px)}
+  .topbar-inner{padding:14px 0;align-items:flex-start;flex-direction:column}
+  .hero-main,.hero-side,.panel{padding:18px}
+  .board,.metric-grid,.mini-stack{grid-template-columns:repeat(2,1fr)}
+  .staff-top,.sub-top,.list-item,.candidate,.panel-header{align-items:flex-start;flex-direction:column}
+}
 </style>
+<link rel="stylesheet" href="/dashboard/brand.css?v=20260409-schoolbrand">
 </head>
 <body>
-<header>
-  <div class="logo">💬 WhatsApp AI Bot <span>powered by Claude</span></div>
-  <div id="status-badge">
-    <div id="status-dot"></div>
-    <span id="status-text">Initializing...</span>
+<header class="topbar">
+  <div class="shell topbar-inner">
+    <a class="brand brand-lockup" href="/dashboard"><img class="brand-mark" src="/dashboard/logo.jpeg" alt="AECHS logo"><span class="brand-copy"><span class="brand-title">CHS.ai</span><span class="brand-subtitle">AECHS Staff Assistant</span></span></a>
+    <nav class="nav">
+      <a class="active" href="/dashboard">Command</a>
+      <a href="/dashboard/people">Directory</a>
+      <a href="/dashboard/chat">Chat</a>
+      <a href="/dashboard/admin">Admin</a>
+    </nav>
+    <div class="top-actions">
+      <button class="button button-secondary" onclick="location.href='/dashboard/people'">Open Staff</button>
+      <button class="button button-primary" onclick="refreshOverview()">Refresh</button>
+    </div>
   </div>
 </header>
-<main>
-  <div>
-    <div class="log-header">
-      <h3>Live Message Log</h3>
-      <button id="clear-btn">Clear</button>
-    </div>
-    <div id="log-list">
-      <div class="empty">
-        <span class="icon">🤖</span>
-        <p>Waiting for messages...</p>
+
+<main class="shell">
+  <section class="hero">
+    <article class="hero-main">
+      <div class="eyebrow">AECHS Operations Cockpit</div>
+      <h1 class="hero-title">School logic, coverage, and staff visibility.</h1>
+      <p class="hero-copy">
+        The dashboard now thinks in school terms: who is on campus, who is free, who is teaching, who still needs web access,
+        and who can realistically cover an absence inside the right department pool.
+      </p>
+      <div class="hero-ribbon">
+        <div class="ribbon-chip">
+          <span>Academic Year</span>
+          <strong id="year-label">2025-2026</strong>
+        </div>
+        <div class="ribbon-chip">
+          <span>Current School Slot</span>
+          <strong id="current-slot">Loading</strong>
+        </div>
+        <div class="ribbon-chip">
+          <span>Coverage Focus</span>
+          <strong id="coverage-focus">Free teachers now</strong>
+        </div>
       </div>
+    </article>
+
+    <aside class="hero-side">
+      <div class="status-card">
+        <div class="label">System posture</div>
+        <div class="value">Operations Ready</div>
+        <div class="sub" id="status-copy">Loading live school view.</div>
+      </div>
+      <div class="mini-stack">
+        <div class="mini-card">
+          <span>Staff On Campus</span>
+          <strong id="stat-campus">0</strong>
+        </div>
+        <div class="mini-card">
+          <span>Free Teachers</span>
+          <strong id="stat-free">0</strong>
+        </div>
+        <div class="mini-card">
+          <span>In Class</span>
+          <strong id="stat-class">0</strong>
+        </div>
+        <div class="mini-card">
+          <span>Web Access Enabled</span>
+          <strong id="stat-access">0</strong>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="panel" style="margin-bottom:18px">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Right Now</div>
+        <div class="panel-sub">Filter the live board by availability. Every card links to the full staff profile.</div>
+      </div>
+      <div class="filter-row" id="board-filters"></div>
     </div>
+    <div class="board" id="presence-board">
+      <div class="empty-state">Loading current staff board.</div>
+    </div>
+  </section>
+
+  <!-- Row 1: School Snapshot + Department Weight -->
+  <div class="two-col" style="margin-bottom:18px">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">School Snapshot</div>
+          <div class="panel-sub">The metrics that matter most during the school day.</div>
+        </div>
+      </div>
+      <div class="metric-grid" id="snapshot-grid">
+        <div class="metric"><span>Loading</span><strong>...</strong></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Department Weight</div>
+          <div class="panel-sub">Primary department distribution across active staff.</div>
+        </div>
+      </div>
+      <div class="list" id="department-list">
+        <div class="empty-state">Loading departments.</div>
+      </div>
+    </section>
   </div>
-</main>
-<script>
-  let received = 0, sent = 0;
 
-  fetch('/dashboard/api/logs')
-    .then(r => r.json())
-    .then(logs => { if (logs.length) { document.getElementById('log-list').innerHTML = ''; [...logs].reverse().forEach(addEntry); } });
-
-  function addEntry(entry) {
-    const list = document.getElementById('log-list');
-    const empty = list.querySelector('.empty');
-    if (empty) empty.remove();
-    const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const div = document.createElement('div');
-    div.className = `msg-entry ${entry.direction}`;
-    div.innerHTML = `
-      <div class="msg-meta">
-        <span class="dir-label">${entry.direction === 'in' ? 'RECV' : 'SENT'}</span>
-        <span>${entry.from}</span>
-        <span>${time}</span>
+  <!-- Row 2: Access Watchlist + Recent Activity (equal height, scrollable) -->
+  <div class="two-col paired-row" style="margin-bottom:28px">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Access Watchlist</div>
+          <div class="panel-sub">Profiles that still do not have a web access code.</div>
+        </div>
       </div>
-      <div class="msg-bubble">${entry.body.replace(/</g,'&lt;')}</div>`;
-    list.appendChild(div);
-    list.scrollTop = list.scrollHeight;
-  }
+      <div class="list scrollable-list" id="missing-access-list">
+        <div class="empty-state">Loading access watchlist.</div>
+      </div>
+    </section>
 
-  document.getElementById('clear-btn').onclick = () => {
-    document.getElementById('log-list').innerHTML = '<div class="empty"><span class="icon">🤖</span><p>Log cleared...</p></div>';
-  };
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Recent Activity</div>
+          <div class="panel-sub">Latest inbound and outbound messages from the system log.</div>
+        </div>
+      </div>
+      <div class="log-list scrollable-list" id="log-list">
+        <div class="empty-state">Loading system activity.</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-note">Built for staff operations first: campus presence, schedule truth, and cleaner substitution decisions.</div>
+</main>
+
+<script>
+let overview = null;
+let boardFilter = 'all';
+const FILTERS = [
+  { id: 'all', label: 'All Staff' },
+  { id: 'free', label: 'Free Now' },
+  { id: 'class', label: 'In Class' },
+  { id: 'meeting', label: 'In Meeting' },
+  { id: 'off_campus', label: 'Off Campus' },
+  { id: 'missing_access', label: 'No Web Access' },
+];
+
+function statusTone(code){
+  if(code === 'free') return 'moss';
+  if(code === 'on_duty') return 'sky';
+  if(code === 'class') return 'amber';
+  if(code === 'meeting') return 'clay';
+  return 'ghost';
+}
+
+function roleLabel(role){
+  if(!role) return 'Staff';
+  return role.replace(/_/g,' ').replace(/\bhod\b/i,'HoD').replace(/\bit\b/i,'IT').replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function renderBoardFilters(){
+  const host = document.getElementById('board-filters');
+  host.innerHTML = FILTERS.map(filter => `
+    <button class="pill ${boardFilter === filter.id ? 'active' : ''}" onclick="setBoardFilter('${filter.id}')">${filter.label}</button>
+  `).join('');
+}
+
+function renderOverview(){
+  if(!overview) return;
+
+  document.title = 'CHS.ai | Operations Command';
+  document.getElementById('year-label').textContent = overview.academic_year;
+  document.getElementById('current-slot').textContent = overview.current_context.period
+    ? `${overview.current_context.day} · P${overview.current_context.period}`
+    : `${overview.current_context.day} · Outside lesson slots`;
+  document.getElementById('coverage-focus').textContent = overview.stats.free_teachers_now
+    ? `${overview.stats.free_teachers_now} free teacher${overview.stats.free_teachers_now === 1 ? '' : 's'} now`
+    : 'No free teachers right now';
+  document.getElementById('status-copy').textContent = `${overview.stats.total_staff} active staff in the operational view.`;
+  document.getElementById('stat-campus').textContent = overview.stats.on_campus_now;
+  document.getElementById('stat-free').textContent = overview.stats.free_teachers_now;
+  document.getElementById('stat-class').textContent = overview.stats.in_class_now;
+  document.getElementById('stat-access').textContent = overview.stats.web_access_enabled;
+
+  renderBoardFilters();
+
+  const snapshot = [
+    ['Active Staff', overview.stats.total_staff],
+    ['Teacher-Like Roles', overview.stats.teacher_like],
+    ['In Meetings', overview.stats.in_meeting_now],
+    ['Missing Web Access', overview.missing_access.length],
+  ];
+  document.getElementById('snapshot-grid').innerHTML = snapshot.map(([label, value]) => `
+    <div class="metric">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join('');
+
+  document.getElementById('department-list').innerHTML = overview.departments.length
+    ? overview.departments.map(item => `
+      <div class="list-item">
+        <div>
+          <strong>${item.name}</strong>
+          <span>Primary department distribution</span>
+        </div>
+        <strong>${item.count}</strong>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No department data yet.</div>';
+
+  document.getElementById('missing-access-list').innerHTML = overview.missing_access.length
+    ? overview.missing_access.map(person => `
+      <a class="list-item" href="/dashboard/staff/${person.id}">
+        <div>
+          <strong>${person.full_name}</strong>
+          <span>${person.primary_department || 'No department'} · ${roleLabel(person.role_type)}</span>
+        </div>
+        <strong>Needs Code</strong>
+      </a>
+    `).join('')
+    : '<div class="empty-state">Every visible profile already has web access.</div>';
+
+  const filteredBoard = overview.board.filter(person => {
+    if(boardFilter === 'all') return true;
+    if(boardFilter === 'missing_access') return !person.web_code;
+    return person.current_status.code === boardFilter;
+  });
+  document.getElementById('presence-board').innerHTML = filteredBoard.length
+    ? filteredBoard.map(person => `
+      <a class="staff-card" href="/dashboard/staff/${person.id}">
+        <div class="staff-top">
+          <div>
+            <div class="staff-name">${person.full_name}</div>
+            <div class="staff-meta">${person.primary_department || 'No department'} · ${roleLabel(person.role_type)}</div>
+          </div>
+          <span class="tag ${statusTone(person.current_status.code)}">${person.current_status.label}</span>
+        </div>
+        <div class="tag-row">
+          <span class="tag ghost">${person.schedule_summary.class_periods} class periods</span>
+          <span class="tag ghost">${person.schedule_summary.meeting_periods} meetings</span>
+          <span class="tag ghost">${person.schedule_summary.free_periods} free</span>
+        </div>
+        <div class="staff-foot">
+          <span>${person.phone || 'No phone listed'}</span>
+          <span>${person.web_code ? 'Web access active' : 'Web access missing'}</span>
+        </div>
+      </a>
+    `).join('')
+    : '<div class="empty-state">No staff match the current filter.</div>';
+
+  document.getElementById('log-list').innerHTML = overview.recent_logs.length
+    ? overview.recent_logs.map(entry => `
+      <div class="log-item">
+        <div class="log-head">
+          <span>${entry.direction === 'in' ? 'Inbound' : 'Outbound'}</span>
+          <span>${new Date(entry.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="log-meta">${entry.from || 'Unknown source'}</div>
+        <div class="log-body">${escapeHtml(entry.body || '')}</div>
+      </div>
+    `).join('')
+    : '<div class="empty-state">No recent logs yet.</div>';
+
+}
+
+function escapeHtml(value){
+  return String(value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function setBoardFilter(next){
+  boardFilter = next;
+  renderOverview();
+}
+
+async function refreshOverview(){
+  try{
+    const response = await fetch('/dashboard/api/ops/overview');
+    overview = await response.json();
+    renderOverview();
+  }catch(error){
+    document.getElementById('presence-board').innerHTML = '<div class="empty-state">Failed to load operations overview.</div>';
+  }
+}
+
+
+refreshOverview();
+setInterval(refreshOverview, 45000);
 </script>
 </body>
 </html>
